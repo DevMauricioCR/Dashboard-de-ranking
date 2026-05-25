@@ -1,0 +1,93 @@
+{
+  "name": "Leads Contactados - HubSpot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "leads-contactados",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-leads",
+      "name": "Webhook GET /leads-contactados",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.hubapi.com/crm/v3/objects/calls",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "limit",       "value": "100" },
+            { "name": "properties",  "value": "hubspot_owner_id,hs_call_status,hs_timestamp,hs_call_title" },
+            { "name": "associations","value": "contacts" }
+          ]
+        }
+      },
+      "id": "hs-calls",
+      "name": "HubSpot - Traer llamadas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.hubapi.com/crm/v3/owners",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotApi"
+      },
+      "id": "hs-owners2",
+      "name": "HubSpot - Propietarios",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Construir lista de leads contactados por asesor\nconst calls  = $('HubSpot - Traer llamadas').first().json.results || [];\nconst owners = $('HubSpot - Propietarios').first().json.results  || [];\n\nconst ownerMap = {};\nfor (const o of owners) {\n  ownerMap[o.id] = `${o.firstName} ${o.lastName}`.trim();\n}\n\n// De-duplicar: un contacto = un lead, independiente de cuántas llamadas\nconst leadsMap = {};\n\nfor (const call of calls) {\n  const ownerId = call.properties.hubspot_owner_id;\n  const asesor  = ownerMap[ownerId] || `Asesor ${ownerId}`;\n  const assocs  = call.associations?.contacts?.results || [];\n  \n  for (const contact of assocs) {\n    const key = `${ownerId}_${contact.id}`;\n    if (!leadsMap[key]) {\n      leadsMap[key] = {\n        id:             `L${contact.id}`,\n        nombre:         `Contacto ${contact.id}`, // se enriquece abajo si tienes más datos\n        asesorId:       ownerId,\n        asesor:         asesor,\n        ultimaLlamada:  call.properties.hs_timestamp,\n        totalLlamadas:  1,\n        estadoNegocio:  'Contactado',\n      };\n    } else {\n      leadsMap[key].totalLlamadas++;\n      // Mantener la llamada más reciente\n      if (new Date(call.properties.hs_timestamp) > new Date(leadsMap[key].ultimaLlamada)) {\n        leadsMap[key].ultimaLlamada = call.properties.hs_timestamp;\n      }\n    }\n  }\n}\n\nconst leads = Object.values(leadsMap)\n  .sort((a, b) => new Date(b.ultimaLlamada) - new Date(a.ultimaLlamada));\n\nreturn leads.map(l => ({ json: l }));"
+      },
+      "id": "code-leads",
+      "name": "De-duplicar leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "*" },
+              { "name": "Content-Type",                "value": "application/json" }
+            ]
+          }
+        }
+      },
+      "id": "respond-leads",
+      "name": "Responder con leads",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Webhook GET /leads-contactados": {
+      "main": [[{ "node": "HubSpot - Traer llamadas",  "type": "main", "index": 0 }]]
+    },
+    "HubSpot - Traer llamadas": {
+      "main": [[{ "node": "HubSpot - Propietarios",    "type": "main", "index": 0 }]]
+    },
+    "HubSpot - Propietarios": {
+      "main": [[{ "node": "De-duplicar leads",          "type": "main", "index": 0 }]]
+    },
+    "De-duplicar leads": {
+      "main": [[{ "node": "Responder con leads",        "type": "main", "index": 0 }]]
+    }
+  }
+}

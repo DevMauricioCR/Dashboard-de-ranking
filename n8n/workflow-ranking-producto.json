@@ -1,0 +1,83 @@
+{
+  "name": "Ranking por Producto - HubSpot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "ranking-producto",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-producto",
+      "name": "Webhook GET /ranking-producto",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.hubapi.com/crm/v3/objects/deals",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "limit",      "value": "100" },
+            {
+              "name":  "properties",
+              "value": "tipo_producto,amount,dealstage"
+            },
+            { "name": "filterGroups[0][filters][0][propertyName]", "value": "dealstage" },
+            { "name": "filterGroups[0][filters][0][operator]",     "value": "EQ" },
+            { "name": "filterGroups[0][filters][0][value]",        "value": "closedwon" }
+          ]
+        }
+      },
+      "id": "hs-deals-prod",
+      "name": "HubSpot - Deals por producto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Agrupar deals cerrados por producto\n// IMPORTANTE: cambia 'tipo_producto' por el API name real de tu campo en HubSpot\nconst deals = $('HubSpot - Deals por producto').first().json.results || [];\n\nconst map = {};\nfor (const d of deals) {\n  const prod = d.properties.tipo_producto || 'Sin producto';\n  if (!map[prod]) map[prod] = { producto: prod, ventas: 0, monto: 0 };\n  map[prod].ventas++;\n  map[prod].monto += parseFloat(d.properties.amount || 0);\n}\n\nconst total = Object.values(map).reduce((s, p) => s + p.ventas, 0);\n\nconst resultado = Object.values(map)\n  .sort((a, b) => b.ventas - a.ventas)\n  .map(p => ({\n    ...p,\n    monto: Math.round(p.monto),\n    pct:   total ? Math.round((p.ventas / total) * 100) : 0\n  }));\n\nreturn resultado.map(r => ({ json: r }));"
+      },
+      "id": "code-producto",
+      "name": "Agrupar por producto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "*" },
+              { "name": "Content-Type",                "value": "application/json" }
+            ]
+          }
+        }
+      },
+      "id": "respond-producto",
+      "name": "Responder con productos",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook GET /ranking-producto": {
+      "main": [[{ "node": "HubSpot - Deals por producto", "type": "main", "index": 0 }]]
+    },
+    "HubSpot - Deals por producto": {
+      "main": [[{ "node": "Agrupar por producto",         "type": "main", "index": 0 }]]
+    },
+    "Agrupar por producto": {
+      "main": [[{ "node": "Responder con productos",      "type": "main", "index": 0 }]]
+    }
+  }
+}

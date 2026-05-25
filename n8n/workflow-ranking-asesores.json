@@ -1,0 +1,95 @@
+{
+  "name": "Ranking Asesores - HubSpot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "ranking-asesores",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-ranking",
+      "name": "Webhook GET /ranking-asesores",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.hubapi.com/crm/v3/objects/deals",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "limit",      "value": "100" },
+            { "name": "properties", "value": "hubspot_owner_id,amount,dealname,closedate,dealstage,tipo_producto" },
+            { "name": "filterGroups[0][filters][0][propertyName]", "value": "dealstage" },
+            { "name": "filterGroups[0][filters][0][operator]",     "value": "EQ" },
+            { "name": "filterGroups[0][filters][0][value]",        "value": "closedwon" }
+          ]
+        }
+      },
+      "id": "hs-deals",
+      "name": "HubSpot - Traer deals cerrados",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.hubapi.com/crm/v3/owners",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotApi"
+      },
+      "id": "hs-owners",
+      "name": "HubSpot - Traer propietarios",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Agrupar deals por asesor\nconst deals   = $('HubSpot - Traer deals cerrados').first().json.results || [];\nconst owners  = $('HubSpot - Traer propietarios').first().json.results || [];\n\n// Mapa id -> nombre\nconst ownerMap = {};\nfor (const o of owners) {\n  ownerMap[o.id] = `${o.firstName} ${o.lastName}`.trim();\n}\n\n// Agrupar\nconst map = {};\nfor (const d of deals) {\n  const id = d.properties.hubspot_owner_id;\n  if (!id) continue;\n  if (!map[id]) map[id] = { ownerId: id, nombre: ownerMap[id] || `Asesor ${id}`, deals: 0, monto: 0, leadsContactados: 0 };\n  map[id].deals++;\n  map[id].monto += parseFloat(d.properties.amount || 0);\n}\n\n// Ordenar y agregar rank\nconst ranking = Object.values(map)\n  .sort((a, b) => b.deals - a.deals)\n  .map((r, i) => ({ ...r, rank: i + 1, tendencia: '0' }));\n\nreturn ranking.map(r => ({ json: r }));"
+      },
+      "id": "code-ranking",
+      "name": "Agrupar por asesor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "*" },
+              { "name": "Content-Type",                "value": "application/json" }
+            ]
+          }
+        }
+      },
+      "id": "respond-ranking",
+      "name": "Responder con ranking",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Webhook GET /ranking-asesores": {
+      "main": [[{ "node": "HubSpot - Traer deals cerrados", "type": "main", "index": 0 }]]
+    },
+    "HubSpot - Traer deals cerrados": {
+      "main": [[{ "node": "HubSpot - Traer propietarios",   "type": "main", "index": 0 }]]
+    },
+    "HubSpot - Traer propietarios": {
+      "main": [[{ "node": "Agrupar por asesor",             "type": "main", "index": 0 }]]
+    },
+    "Agrupar por asesor": {
+      "main": [[{ "node": "Responder con ranking",          "type": "main", "index": 0 }]]
+    }
+  }
+}

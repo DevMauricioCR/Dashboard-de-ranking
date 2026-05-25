@@ -1,0 +1,163 @@
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.clearBtn {
+  font-size: 12px;
+  color: var(--text-2);
+  background: none;
+  border: 0.5px solid var(--border-hi);
+  border-radius: 20px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.clearBtn:hover { color: var(--text-1); border-color: var(--text-2); }
+
+/* PODIO */
+.podioWrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding: 16px 8px 0;
+}
+
+.podioCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  max-width: 160px;
+  cursor: default;
+}
+
+.podioAvatar {
+  width: 52px !important;
+  height: 52px !important;
+  font-size: 16px !important;
+  font-weight: 700;
+  margin-bottom: 8px;
+  box-shadow: 0 0 0 3px var(--bg-card), 0 0 0 5px var(--border-hi);
+}
+
+.podioNombre {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-1);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.podioApellido {
+  font-size: 11px;
+  color: var(--text-3);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.podioStats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.podioDeals {
+  font-size: 12px;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.podioMonto {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.podioBase {
+  width: 100%;
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  background: var(--bg-hover);
+  border: 0.5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.podioCard:nth-child(2) .podioBase { background: rgba(232,184,75,.06); border-color: rgba(232,184,75,.2); }
+.podioCard:nth-child(1) .podioBase { background: rgba(156,163,184,.06); border-color: rgba(156,163,184,.2); }
+.podioCard:nth-child(3) .podioBase { background: rgba(176,112,64,.06); border-color: rgba(176,112,64,.2); }
+
+.podioMedal { font-size: 22px; }
+.podioRank  { font-family: var(--font-display); font-size: 12px; font-weight: 700; color: var(--text-3); }
+
+/* TABLE */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  border-top: 0.5px solid var(--border);
+  margin-top: 4px;
+}
+
+.table th {
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 10px 10px 8px;
+  text-align: left;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.row {
+  cursor: pointer;
+  transition: background .15s;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.row:last-child { border-bottom: none; }
+.row:hover { background: var(--bg-hover); }
+.row.selected { background: rgba(79,142,247,.06); }
+
+.row td {
+  padding: 10px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.rank {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px !important;
+  color: var(--text-3) !important;
+  width: 32px;
+}
+
+.nameCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nombre {
+  font-size: 13px !important;
+  color: var(--text-1) !important;
+  font-weight: 500;
+}
+
+.num { color: var(--text-1) !important; font-variant-numeric: tabular-nums; }
+.monto { color: var(--green) !important; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* skeletons */
+.skSm    { width: 40px;  height: 14px; }
+.skMd    { width: 100px; height: 14px; }
+.skAvatar { width: 32px; height: 32px; border-radius: 50%; }
