@@ -1,5 +1,18 @@
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: var(--sans);
+}
 html, body { height: 100%; }
+
+@font-face {
+  font-family: 'Helvetica Local';
+  src: url('/fonts/Helvetica.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   --bg:      #0a0a0a;
@@ -26,8 +39,9 @@ html, body { height: 100%; }
   --red-w:   #a05030;
   --red-wd:  rgba(160,80,48,0.10);
 
-  --serif: Georgia, 'Times New Roman', serif;
-  --sans:  'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --serif: 'Helvetica Local', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --sans:  'Helvetica Local', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-display: 'Helvetica Local', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --r:     8px;
   --r-sm:  4px;
 }
@@ -257,6 +271,7 @@ body {
 }
 .kpi:hover .kpi-val { letter-spacing: -0.03em; }
 .kpi.accent .kpi-val { color: var(--gold); }
+.kpi.accent .kpi-val { font-size: 40px; }
 .kpi.accent:hover .kpi-val { color: var(--cream); }
 
 .kpi-sub {
@@ -394,8 +409,8 @@ body {
 .pod-amount {
   font-family: var(--serif);
   font-style: italic;
-  font-size: 15px;
-  margin-bottom: 3px;
+  font-size: 20px;
+  margin-bottom: 5px;
   transition: letter-spacing 0.3s ease;
 }
 .pod:hover .pod-amount { letter-spacing: 0.01em; }
@@ -565,6 +580,9 @@ body {
   transition: letter-spacing 0.3s ease;
 }
 .star-stat:hover .sval { letter-spacing: 0.01em; }
+.sval-total {
+  font-size: 24px;
+}
 
 .slbl {
   font-family: var(--sans);

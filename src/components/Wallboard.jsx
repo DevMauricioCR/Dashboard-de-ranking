@@ -74,7 +74,7 @@ function isCurrentQuarterClose(deal, range) {
 function ownerName(deal) {
   return [deal.owner?.firstName, deal.owner?.lastName].filter(Boolean).join(' ').trim()
     || deal.owner?.email
-    || (deal.hubspotOwnerId ? `Asesor ${deal.hubspotOwnerId}` : 'Sin asesor')
+    || 'Sin asesor asignado'
 }
 
 function lineItemName(item) {

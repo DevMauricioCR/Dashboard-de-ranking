@@ -82,7 +82,7 @@ export default function StarCard({ asesor, isLoading, totalEquipo }) {
           <text
             x="160" y="112"
             textAnchor="middle"
-            fontFamily="Georgia,serif"
+            fontFamily="var(--sans)"
             fontStyle="italic"
             fontSize="40"
             fill="rgba(0,0,0,0.40)"
@@ -122,10 +122,10 @@ export default function StarCard({ asesor, isLoading, totalEquipo }) {
         </div>
       </div>
 
-      {/* STATS GRID */}
+        {/* STATS GRID */}
       <div className="star-grid">
         <div className="star-stat">
-          <div className="sval">{fmtCompact(asesor.totalVentas)}</div>
+          <div className="sval sval-total">{fmtCompact(asesor.totalVentas)}</div>
           <div className="slbl">Ventas totales</div>
         </div>
         <div className="star-stat">

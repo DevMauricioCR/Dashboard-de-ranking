@@ -46,19 +46,24 @@ async function getAllDeals() {
 
 async function getOwners() {
   const owners = [];
-  let after = null;
+  const archivedModes = [false, true];
 
-  do {
-    const params = new URLSearchParams({
-      limit: '100'
-    });
+  for (const archived of archivedModes) {
+    let after = null;
 
-    if (after) params.append('after', after);
+    do {
+      const params = new URLSearchParams({
+        limit: '100',
+        archived: String(archived)
+      });
 
-    const data = await hubspotFetch(`/crm/v3/owners/?${params.toString()}`);
-    owners.push(...(data.results || []));
-    after = data?.paging?.next?.after || null;
-  } while (after);
+      if (after) params.append('after', after);
+
+      const data = await hubspotFetch(`/crm/v3/owners/?${params.toString()}`);
+      owners.push(...(data.results || []));
+      after = data?.paging?.next?.after || null;
+    } while (after);
+  }
 
   const ownerMap = new Map();
 

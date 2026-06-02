@@ -224,11 +224,11 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
       const grouped = new Map<string, any>();
 
       for (const deal of deals) {
-        const ownerId = String(deal.owner?.id || deal.owner?.userId || deal.hubspotOwnerId || 'sin-owner');
+        const ownerId = String(deal.owner?.id || deal.owner?.userId || 'sin-owner');
         const nombre =
           fullName(deal.owner?.firstName, deal.owner?.lastName) ||
           deal.owner?.email ||
-          (ownerId === 'sin-owner' ? 'Sin asesor asignado' : `Asesor ${ownerId}`);
+          'Sin asesor asignado';
 
         if (!grouped.has(ownerId)) {
           grouped.set(ownerId, {
