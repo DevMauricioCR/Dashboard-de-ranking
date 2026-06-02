@@ -1,0 +1,212 @@
+{
+    "name":  "HubSpot - Dataset deals optimizado para dashboard",
+    "nodes":  [
+                  {
+                      "parameters":  {
+                                         "httpMethod":  "GET",
+                                         "path":  "hubspot-deals-dataset-optimizado",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "webhook-dashboard",
+                      "name":  "Webhook",
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       0,
+                                       0
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "content":  "## Dashboard optimizado\n\nRequiere `HUBSPOT_ACCESS_TOKEN` en variables de entorno de n8n.\n\nEndpoint:\n`GET /webhook/hubspot-deals-dataset-optimizado?periodo=diario|mensual|trimestral`\n\nEste workflow filtra negocios desde HubSpot con `/crm/v3/objects/deals/search`, lee asociaciones por batch y une `Negocios + Contactos + Elementos de pedido` antes de responder."
+                                     },
+                      "id":  "nota-dashboard",
+                      "name":  "Nota",
+                      "type":  "n8n-nodes-base.stickyNote",
+                      "typeVersion":  1,
+                      "position":  [
+                                       -20,
+                                       -300
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "mode":  "runOnceForAllItems",
+                                         "language":  "javaScript",
+                                         "jsCode":  "const BASE_URL = \u0027https://api.hubapi.com\u0027;\nconst token = $env.HUBSPOT_ACCESS_TOKEN;\n\nif (!token) {\n  throw new Error(\u0027Falta HUBSPOT_ACCESS_TOKEN en variables de entorno de n8n\u0027);\n}\n\nconst query = $(\u0027Webhook\u0027).first().json.query || {};\nconst periodo = query.periodo || \u0027mensual\u0027;\nconst staticData = $getWorkflowStaticData(\u0027global\u0027);\nconst cacheKey = `dashboard:${periodo}`;\nconst cacheTtlMs = Number(query.cacheTtlMs || 120000);\nconst cached = staticData[cacheKey];\n\nif (query.force !== \u0027true\u0027 \u0026\u0026 cached?.payload \u0026\u0026 !staticData.cacheDirty \u0026\u0026 Date.now() - cached.savedAt \u003c cacheTtlMs) {\n  return [{\n    json: {\n      ...cached.payload,\n      cache: {\n        hit: true,\n        savedAt: cached.savedAt,\n        ageMs: Date.now() - cached.savedAt,\n        dirty: Boolean(staticData.cacheDirty)\n      }\n    }\n  }];\n}\n\nfunction getPeriodRange(value) {\n  const now = new Date();\n  const end = new Date(now);\n  end.setHours(23, 59, 59, 999);\n\n  const start = new Date(now);\n  start.setHours(0, 0, 0, 0);\n\n  if (value === \u0027diario\u0027) return { start, end };\n\n  if (value === \u0027trimestral\u0027) {\n    const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;\n    start.setMonth(quarterStartMonth, 1);\n    return { start, end };\n  }\n\n  start.setDate(1);\n  return { start, end };\n}\n\nconst { start, end } = getPeriodRange(periodo);\n\nconst n8nContext = this;\n\nasync function hubspotFetch(path, options = {}) {\n  const requestOptions = {\n    method: options.method || \u0027GET\u0027,\n    url: `${BASE_URL}${path}`,\n    headers: {\n      Authorization: `Bearer ${token}`,\n      \u0027Content-Type\u0027: \u0027application/json\u0027,\n      ...(options.headers || {})\n    },\n    json: true\n  };\n\n  if (options.body) {\n    requestOptions.body = typeof options.body === \u0027string\u0027\n      ? JSON.parse(options.body)\n      : options.body;\n  }\n\n  return await n8nContext.helpers.httpRequest(requestOptions);\n}\n\nfunction chunkArray(arr, size = 100) {\n  const chunks = [];\n  for (let i = 0; i \u003c arr.length; i += size) chunks.push(arr.slice(i, i + size));\n  return chunks;\n}\n\nasync function searchDeals() {\n  const deals = [];\n  let after = null;\n\n  do {\n    const body = {\n      filterGroups: [\n        {\n          filters: [\n            { propertyName: \u0027closedate\u0027, operator: \u0027GTE\u0027, value: String(start.getTime()) },\n            { propertyName: \u0027closedate\u0027, operator: \u0027LTE\u0027, value: String(end.getTime()) }\n          ]\n        }\n      ],\n      properties: [\n        \u0027dealname\u0027,\n        \u0027amount\u0027,\n        \u0027dealstage\u0027,\n        \u0027pipeline\u0027,\n        \u0027closedate\u0027,\n        \u0027createdate\u0027,\n        \u0027hs_lastmodifieddate\u0027,\n        \u0027hubspot_owner_id\u0027\n      ],\n      limit: 100,\n      sorts: [{ propertyName: \u0027closedate\u0027, direction: \u0027DESCENDING\u0027 }]\n    };\n\n    if (after) body.after = after;\n\n    const data = await hubspotFetch(\u0027/crm/v3/objects/deals/search\u0027, {\n      method: \u0027POST\u0027,\n      body: JSON.stringify(body)\n    });\n\n    deals.push(...(data.results || []));\n    after = data.paging?.next?.after || null;\n  } while (after);\n\n  return deals;\n}\n\nasync function getStageLabels() {\n  const map = new Map();\n  const data = await hubspotFetch(\u0027/crm/v3/pipelines/deals\u0027);\n\n  for (const pipeline of data.results || []) {\n    for (const stage of pipeline.stages || []) {\n      if (stage.id) map.set(String(stage.id), stage.label || stage.id);\n    }\n  }\n\n  return map;\n}\nasync function getOwners() {\n  const owners = [];\n  let after = null;\n\n  do {\n    const path = `/crm/v3/owners/?limit=100${after ? `\u0026after=${after}` : \u0027\u0027}`;\n    const data = await hubspotFetch(path);\n    owners.push(...(data.results || []));\n    after = data.paging?.next?.after || null;\n  } while (after);\n\n  const map = new Map();\n  for (const owner of owners) {\n    if (owner.id) map.set(String(owner.id), owner);\n    if (owner.userId) map.set(String(owner.userId), owner);\n  }\n  return map;\n}\n\nasync function batchReadAssociations(fromObjectType, toObjectType, fromIds) {\n  const map = new Map();\n  const uniqueIds = [...new Set(fromIds.map(String))];\n\n  for (const chunk of chunkArray(uniqueIds, 100)) {\n    const data = await hubspotFetch(`/crm/v4/associations/${fromObjectType}/${toObjectType}/batch/read`, {\n      method: \u0027POST\u0027,\n      body: JSON.stringify({ inputs: chunk.map(id =\u003e ({ id })) })\n    });\n\n    for (const result of data.results || []) {\n      const fromId = String(result.from?.id || result._from?.id || result.id || \u0027\u0027);\n      const toIds = (result.to || [])\n        .map(item =\u003e String(item.toObjectId || item.id || \u0027\u0027))\n        .filter(Boolean);\n      if (fromId) map.set(fromId, toIds);\n    }\n  }\n\n  return map;\n}\n\nasync function batchReadObjects(objectType, ids, properties) {\n  const map = new Map();\n  const uniqueIds = [...new Set(ids.map(String))].filter(Boolean);\n  if (!uniqueIds.length) return map;\n\n  for (const chunk of chunkArray(uniqueIds, 100)) {\n    const data = await hubspotFetch(`/crm/v3/objects/${objectType}/batch/read`, {\n      method: \u0027POST\u0027,\n      body: JSON.stringify({ properties, inputs: chunk.map(id =\u003e ({ id })) })\n    });\n\n    for (const item of data.results || []) map.set(String(item.id), item);\n  }\n\n  return map;\n}\n\nconst startedAt = Date.now();\nconst deals = await searchDeals();\nconst dealIds = deals.map(deal =\u003e String(deal.id));\n\nconst [ownerMap, stageLabelMap, contactAssociations, lineItemAssociations] = await Promise.all([\n  getOwners(),\n  getStageLabels(),\n  batchReadAssociations(\u0027deals\u0027, \u0027contacts\u0027, dealIds),\n  batchReadAssociations(\u0027deals\u0027, \u0027line_items\u0027, dealIds)\n]);\n\nconst contactIds = [...contactAssociations.values()].flat();\nconst lineItemIds = [...lineItemAssociations.values()].flat();\n\nconst [contactMap, lineItemMap] = await Promise.all([\n  batchReadObjects(\u0027contacts\u0027, contactIds, [\u0027firstname\u0027, \u0027lastname\u0027, \u0027email\u0027, \u0027phone\u0027, \u0027company\u0027]),\n  batchReadObjects(\u0027line_items\u0027, lineItemIds, [\u0027name\u0027, \u0027quantity\u0027, \u0027price\u0027, \u0027amount\u0027, \u0027hs_product_id\u0027, \u0027hs_sku\u0027])\n]);\n\nconst result = deals.map(deal =\u003e {\n  const props = deal.properties || {};\n  const ownerId = props.hubspot_owner_id ? String(props.hubspot_owner_id) : null;\n  const owner = ownerId ? ownerMap.get(ownerId) || null : null;\n\n  const contacts = (contactAssociations.get(String(deal.id)) || [])\n    .map(id =\u003e contactMap.get(String(id)))\n    .filter(Boolean)\n    .map(contact =\u003e ({\n      id: contact.id,\n      firstname: contact.properties?.firstname || null,\n      lastname: contact.properties?.lastname || null,\n      email: contact.properties?.email || null,\n      phone: contact.properties?.phone || null,\n      company: contact.properties?.company || null\n    }));\n\n  const lineItems = (lineItemAssociations.get(String(deal.id)) || [])\n    .map(id =\u003e lineItemMap.get(String(id)))\n    .filter(Boolean)\n    .map(item =\u003e ({\n      id: item.id,\n      name: item.properties?.name || null,\n      quantity: item.properties?.quantity || null,\n      price: item.properties?.price || null,\n      amount: item.properties?.amount || null,\n      hs_product_id: item.properties?.hs_product_id || null,\n      sku: item.properties?.hs_sku || null\n    }));\n\n  return {\n    dealId: deal.id,\n    dealName: props.dealname || null,\n    amount: props.amount || null,\n    dealStage: props.dealstage || null,\n    dealStageLabel: props.dealstage ? stageLabelMap.get(String(props.dealstage)) || null : null,\n    pipeline: props.pipeline || null,\n    closeDate: props.closedate || null,\n    createDate: props.createdate || null,\n    lastModifiedDate: props.hs_lastmodifieddate || null,\n    hubspotOwnerId: ownerId,\n    owner: owner\n      ? {\n          id: owner.id || null,\n          userId: owner.userId || null,\n          firstName: owner.firstName || null,\n          lastName: owner.lastName || null,\n          email: owner.email || null\n        }\n      : null,\n    contacts,\n    lineItems\n  };\n});\n\nconst payload = {\n  periodo,\n  desdeISO: start.toISOString(),\n  hastaISO: end.toISOString(),\n  totalDeals: result.length,\n  totalLineItems: lineItemIds.length,\n  elapsedMs: Date.now() - startedAt,\n  deals: result\n};\n\nstaticData[cacheKey] = {\n  savedAt: Date.now(),\n  payload\n};\nstaticData.cacheDirty = false;\nstaticData.lastBuild = {\n  at: new Date().toISOString(),\n  periodo,\n  totalDeals: result.length,\n  totalLineItems: lineItemIds.length\n};\n\nreturn [{\n  json: {\n    ...payload,\n    cache: {\n      hit: false,\n      savedAt: staticData[cacheKey].savedAt,\n      ageMs: 0,\n      dirty: false\n    }\n  }\n}];"
+                                     },
+                      "id":  "construir-dataset-optimizado",
+                      "name":  "Construir Dataset Optimizado",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       280,
+                                       0
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "json",
+                                         "responseBody":  "={{ $json }}",
+                                         "options":  {
+                                                         "responseHeaders":  {
+                                                                                 "entries":  [
+                                                                                                 {
+                                                                                                     "name":  "Access-Control-Allow-Origin",
+                                                                                                     "value":  "*"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "Access-Control-Allow-Methods",
+                                                                                                     "value":  "GET, OPTIONS"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "Access-Control-Allow-Headers",
+                                                                                                     "value":  "Content-Type, x-api-key"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "Content-Type",
+                                                                                                     "value":  "application/json"
+                                                                                                 }
+                                                                                             ]
+                                                                             }
+                                                     }
+                                     },
+                      "id":  "responder-dashboard",
+                      "name":  "Responder Dashboard",
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       560,
+                                       0
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "httpMethod":  "POST",
+                                         "path":  "hubspot-dashboard-change",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "webhook-hubspot-change",
+                      "name":  "Webhook HubSpot Change",
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -20,
+                                       260
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "mode":  "runOnceForAllItems",
+                                         "language":  "javaScript",
+                                         "jsCode":  "const staticData = $getWorkflowStaticData(\u0027global\u0027);\nconst request = $(\u0027Webhook HubSpot Change\u0027).first().json;\n\nstaticData.cacheDirty = true;\nstaticData.lastInvalidation = {\n  at: new Date().toISOString(),\n  source: \u0027hubspot-workflow\u0027,\n  body: request.body || request,\n  query: request.query || {}\n};\n\nreturn [{\n  json: {\n    ok: true,\n    cacheDirty: true,\n    receivedAt: staticData.lastInvalidation.at,\n    message: \u0027Dashboard cache invalidated. Next dashboard request will rebuild data.\u0027,\n    received: staticData.lastInvalidation.body\n  }\n}];"
+                                     },
+                      "id":  "marcar-cache-sucia",
+                      "name":  "Marcar Cache Sucia",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       260,
+                                       260
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "json",
+                                         "responseBody":  "={{ $json }}",
+                                         "options":  {
+                                                         "responseHeaders":  {
+                                                                                 "entries":  [
+                                                                                                 {
+                                                                                                     "name":  "Access-Control-Allow-Origin",
+                                                                                                     "value":  "*"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "Access-Control-Allow-Methods",
+                                                                                                     "value":  "POST, OPTIONS"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "Access-Control-Allow-Headers",
+                                                                                                     "value":  "Content-Type, x-api-key"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "Content-Type",
+                                                                                                     "value":  "application/json"
+                                                                                                 }
+                                                                                             ]
+                                                                             }
+                                                     }
+                                     },
+                      "id":  "responder-hubspot-change",
+                      "name":  "Responder HubSpot Change",
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       540,
+                                       260
+                                   ]
+                  }
+              ],
+    "pinData":  {
+
+                },
+    "connections":  {
+                        "Webhook":  {
+                                        "main":  [
+                                                     [
+                                                         {
+                                                             "node":  "Construir Dataset Optimizado",
+                                                             "type":  "main",
+                                                             "index":  0
+                                                         }
+                                                     ]
+                                                 ]
+                                    },
+                        "Construir Dataset Optimizado":  {
+                                                             "main":  [
+                                                                          [
+                                                                              {
+                                                                                  "node":  "Responder Dashboard",
+                                                                                  "type":  "main",
+                                                                                  "index":  0
+                                                                              }
+                                                                          ]
+                                                                      ]
+                                                         },
+                        "Webhook HubSpot Change":  {
+                                                       "main":  [
+                                                                    {
+                                                                        "node":  "Marcar Cache Sucia",
+                                                                        "type":  "main",
+                                                                        "index":  0
+                                                                    }
+                                                                ]
+                                                   },
+                        "Marcar Cache Sucia":  {
+                                                   "main":  [
+                                                                {
+                                                                    "node":  "Responder HubSpot Change",
+                                                                    "type":  "main",
+                                                                    "index":  0
+                                                                }
+                                                            ]
+                                               }
+                    },
+    "active":  false,
+    "settings":  {
+                     "executionOrder":  "v1"
+                 },
+    "versionId":  "dashboard-optimizado-v1",
+    "meta":  {
+                 "templateCredsSetupCompleted":  true
+             },
+    "tags":  [
+
+             ]
+}

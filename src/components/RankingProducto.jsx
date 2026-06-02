@@ -1,100 +1,155 @@
 import { useState } from 'react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import styles from './RankingProducto.module.css'
+import { useRankingProducto } from '../hooks/useData'
 
-const fmtM = n => {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}k`
-  return `$${n}`
+const PROD_COLORS = ['#c8a96e', '#b87333', '#8b7355', '#5c4a35', '#3a3530', '#272727']
+
+const shortName = name => {
+  const words = name.trim().split(/\s+/)
+  const short  = words.slice(0, 2).join(' ')
+  return short.length > 16 ? short.substring(0, 15) + '…' : short
 }
 
-const COLORS = ['#4f8ef7', '#7c5ce8', '#34d399', '#fbbf24', '#f87171', '#60a5fa']
+const fmtMXN = n => new Intl.NumberFormat('es-MX', {
+  style: 'currency', currency: 'MXN', maximumFractionDigits: 0,
+}).format(n)
 
-const CustomTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null
-  return (
-    <div className={styles.tooltip}>
-      <p className={styles.ttLabel}>{label}</p>
-      <p className={styles.ttVal}>{payload[0].name === 'ventas'
-        ? `${payload[0].value} ventas`
-        : fmtM(payload[0].value)
-      }</p>
-    </div>
-  )
-}
+export default function RankingProducto({ periodo }) {
+  const { data, isLoading, isError, error } = useRankingProducto(periodo)
+  const [open, setOpen] = useState(null)
 
-export default function RankingProducto({ data, isLoading }) {
-  const [mode, setMode] = useState('ventas')
-
-  if (isLoading) return (
-    <div className="card">
-      <p className="card-title">Ranking por producto</p>
-      <div className={`skeleton`} style={{ height: 200, borderRadius: 'var(--r-md)' }} />
-    </div>
-  )
-
-  if (!data?.length) return null
-
-  const total = data.reduce((s, p) => s + p[mode], 0)
-  const max   = Math.max(...data.map(p => p[mode]))
-
-  return (
-    <div className="card">
-      <div className={styles.header}>
-        <p className="card-title" style={{ marginBottom: 0 }}>Por producto</p>
-        <div className={styles.toggle}>
-          <button
-            className={`${styles.btn} ${mode === 'ventas' ? styles.active : ''}`}
-            onClick={() => setMode('ventas')}
-          >Unidades</button>
-          <button
-            className={`${styles.btn} ${mode === 'monto' ? styles.active : ''}`}
-            onClick={() => setMode('monto')}
-          >Monto</button>
+  if (isLoading) {
+    return (
+      <div className="panel">
+        <div className="panel-head">
+          <span className="panel-title">Top productos</span>
+          <span className="panel-meta">por ingreso</span>
         </div>
+        <div className="state-box">Cargando productos…</div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="panel">
+        <div className="panel-head">
+          <span className="panel-title">Top productos</span>
+        </div>
+        <div className="state-box" style={{ color: 'var(--red-w)' }}>Error: {error?.message}</div>
+      </div>
+    )
+  }
+
+  const { ranking = [] } = data || {}
+  const top = ranking.slice(0, 6)
+  const maxV = top[0]?.totalVentas || 1
+
+  if (top.length === 0) {
+    return (
+      <div className="panel">
+        <div className="panel-head">
+          <span className="panel-title">Top productos</span>
+        </div>
+        <div className="state-box">Sin datos de productos en este periodo.</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <span className="panel-title">Top productos</span>
+        <span className="panel-meta">por ingreso</span>
       </div>
 
-      <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={data} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-          <XAxis
-            type="number"
-            tick={{ fill: 'var(--text-3)', fontSize: 10 }}
-            axisLine={false}
-            tickLine={false}
-            tickFormatter={mode === 'monto' ? fmtM : undefined}
-          />
-          <YAxis
-            type="category"
-            dataKey="producto"
-            tick={{ fill: 'var(--text-2)', fontSize: 12 }}
-            axisLine={false}
-            tickLine={false}
-            width={110}
-          />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-          <Bar dataKey={mode} radius={[0, 4, 4, 0]} maxBarSize={22}>
-            {data.map((_, i) => (
-              <Cell key={i} fill={COLORS[i % COLORS.length]} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-
-      <div className={styles.list}>
-        {data.map((p, i) => {
-          const pct = total ? Math.round((p[mode] / total) * 100) : 0
+      {/* MICRO CHART */}
+      <div className="microchart">
+        {top.map((p, i) => {
+          const h = Math.max(2, Math.round(p.totalVentas / maxV * 44))
           return (
-            <div key={p.producto} className={styles.item}>
-              <span className={styles.dot} style={{ background: COLORS[i % COLORS.length] }} />
-              <span className={styles.prod}>{p.producto}</span>
-              <span className={styles.pct}>{pct}%</span>
-              <span className={styles.val}>
-                {mode === 'ventas' ? `${p.ventas} vtas` : fmtM(p.monto)}
-              </span>
+            <div key={p.producto} className="mbar" style={{ height: h, background: PROD_COLORS[i % PROD_COLORS.length] }}>
+              <div className="mbar-tip">${(p.totalVentas / 1000).toFixed(0)}k</div>
             </div>
           )
         })}
       </div>
+      <div className="mbar-lbls">
+        {top.map(p => (
+          <div key={p.producto} className="mbar-lbl">{shortName(p.producto)}</div>
+        ))}
+      </div>
+
+      {/* PRODUCT LIST */}
+      {top.map((p, i) => {
+        const isOpen = open === p.producto
+        return (
+          <div key={p.producto} style={{ borderBottom: i < top.length - 1 ? '1px solid var(--b1)' : 'none' }}>
+            <div
+              className="prod-row"
+              style={{ borderBottom: 'none' }}
+              onClick={() => setOpen(isOpen ? null : p.producto)}
+            >
+              <div className="prod-n">{i + 1}</div>
+              <div className="prod-line" style={{ background: PROD_COLORS[i % PROD_COLORS.length] }} />
+              <div className="prod-info">
+                <div className="prod-name" title={p.producto}>{shortName(p.producto)}</div>
+                <div className="prod-units">{p.unidades} unidades</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="prod-amt">{fmtMXN(p.totalVentas)}</div>
+                <svg
+                  viewBox="0 0 24 24"
+                  style={{
+                    width: 10, height: 10,
+                    stroke: 'var(--muted)', fill: 'none',
+                    strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+                    transition: 'transform 0.22s ease',
+                    transform: isOpen ? 'rotate(180deg)' : 'none',
+                    flexShrink: 0,
+                  }}
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+            </div>
+
+            {/* DETAIL */}
+            <div
+              className="prod-detail"
+              style={{ maxHeight: isOpen ? 80 : 0, opacity: isOpen ? 1 : 0 }}
+            >
+              <div style={{ padding: '10px 16px 14px' }}>
+                <div style={{
+                  fontFamily: 'var(--sans)', fontSize: 9, color: 'var(--muted)',
+                  letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8,
+                }}>
+                  Resumen
+                </div>
+                <div style={{ display: 'flex', gap: 24 }}>
+                  <div>
+                    <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 18, color: 'var(--cream)' }}>
+                      {fmtMXN(p.totalVentas)}
+                    </div>
+                    <div style={{ fontFamily: 'var(--sans)', fontSize: 9, color: 'var(--muted)', marginTop: 2 }}>ingreso total</div>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 18, color: 'var(--gold)' }}>
+                      {p.unidades}
+                    </div>
+                    <div style={{ fontFamily: 'var(--sans)', fontSize: 9, color: 'var(--muted)', marginTop: 2 }}>unidades</div>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 18, color: 'var(--text)' }}>
+                      {fmtMXN(Math.round(p.totalVentas / (p.unidades || 1)))}
+                    </div>
+                    <div style={{ fontFamily: 'var(--sans)', fontSize: 9, color: 'var(--muted)', marginTop: 2 }}>precio promedio</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

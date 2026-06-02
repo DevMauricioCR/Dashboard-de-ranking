@@ -1,0 +1,411 @@
+{
+  "name": "HubSpot - Dataset deals completo HTTP nodes",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "ad90d165-7e0d-4723-bde1-3e706739a1fc",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Requisito\nDefine `HUBSPOT_ACCESS_TOKEN` como variable de entorno en n8n.\n\nEste workflow replica la lógica del script:\n1. Lista deals paginados.\n2. Lista owners paginados.\n3. Lee contactos asociados en batch.\n4. Lee line items asociados en batch.\n5. Construye el dataset final."
+      },
+      "id": "557a275f-3657-4722-9479-ebaf27740d90",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -120,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.hubapi.com/crm/v3/objects/deals",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "properties",
+              "value": "dealname,amount,dealstage,pipeline,closedate,createdate,hs_lastmodifieddate,hubspot_owner_id"
+            },
+            {
+              "name": "associations",
+              "value": "contacts,line_items"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.HUBSPOT_ACCESS_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "after",
+                    "value": "={{ $response.body.paging.next.after }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !$response.body.paging?.next?.after }}"
+            }
+          }
+        }
+      },
+      "id": "4095fbdc-94df-4412-805c-a4585478dd6b",
+      "name": "Listar Deals",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.hubapi.com/crm/v3/owners/",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.HUBSPOT_ACCESS_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "after",
+                    "value": "={{ $response.body.paging.next.after }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !$response.body.paging?.next?.after }}"
+            }
+          }
+        }
+      },
+      "id": "f29e8528-11d4-4029-b8c7-dd74d9f57321",
+      "name": "Listar Owners",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const deals = $('Listar Deals').all().flatMap(item => item.json.results || []);\n\nfunction getAssociationIds(record, associationType) {\n  return (record.associations?.[associationType]?.results || []).map(item => item.id);\n}\n\nfunction chunkArray(arr, size = 100) {\n  const chunks = [];\n  for (let i = 0; i < arr.length; i += size) {\n    chunks.push(arr.slice(i, i + size));\n  }\n  return chunks;\n}\n\nconst allContactIds = deals.flatMap(deal => getAssociationIds(deal, 'contacts'));\nconst uniqueIds = [...new Set(allContactIds.map(String))];\n\nif (!uniqueIds.length) {\n  return [{ json: { skip: true, type: 'contacts', body: { properties: ['firstname', 'lastname', 'email', 'phone', 'company'], inputs: [] } } }];\n}\n\nreturn chunkArray(uniqueIds, 100).map(chunk => ({\n  json: {\n    skip: false,\n    type: 'contacts',\n    body: {\n      properties: ['firstname', 'lastname', 'email', 'phone', 'company'],\n      inputs: chunk.map(id => ({ id }))\n    }\n  }\n}));"
+      },
+      "id": "a0415eae-ea18-4482-ab67-0833a374c268",
+      "name": "Preparar Chunks Contactos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.skip || false}}",
+              "value2": false
+            }
+          ]
+        }
+      },
+      "id": "60769e3f-1da8-439c-878a-781592b9b2cd",
+      "name": "Hay Contactos",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/contacts/batch/read",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.HUBSPOT_ACCESS_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "id": "0b0ac0ac-2a94-4325-b656-ad2da74d98b5",
+      "name": "Leer Contactos Batch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const deals = $('Listar Deals').all().flatMap(item => item.json.results || []);\n\nfunction getAssociationIds(record, associationType) {\n  return (record.associations?.[associationType]?.results || []).map(item => item.id);\n}\n\nfunction chunkArray(arr, size = 100) {\n  const chunks = [];\n  for (let i = 0; i < arr.length; i += size) {\n    chunks.push(arr.slice(i, i + size));\n  }\n  return chunks;\n}\n\nconst allLineItemIds = deals.flatMap(deal => getAssociationIds(deal, 'line_items'));\nconst uniqueIds = [...new Set(allLineItemIds.map(String))];\n\nif (!uniqueIds.length) {\n  return [{ json: { skip: true, type: 'line_items', body: { properties: ['name', 'quantity', 'price', 'amount', 'hs_product_id', 'sku'], inputs: [] } } }];\n}\n\nreturn chunkArray(uniqueIds, 100).map(chunk => ({\n  json: {\n    skip: false,\n    type: 'line_items',\n    body: {\n      properties: ['name', 'quantity', 'price', 'amount', 'hs_product_id', 'sku'],\n      inputs: chunk.map(id => ({ id }))\n    }\n  }\n}));"
+      },
+      "id": "d5201a56-fa9d-44c5-8583-208516ce3452",
+      "name": "Preparar Chunks Line Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.skip || false}}",
+              "value2": false
+            }
+          ]
+        }
+      },
+      "id": "8e86ade9-7a32-41a0-b68c-4a9d13f3d73c",
+      "name": "Hay Line Items",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1820,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/line_items/batch/read",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.HUBSPOT_ACCESS_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "id": "88109064-f427-429f-9e3f-c398bcc78fd1",
+      "name": "Leer Line Items Batch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2080,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "function safeAll(nodeName) {\n  try {\n    return $(nodeName).all();\n  } catch (error) {\n    return [];\n  }\n}\n\nfunction getAssociationIds(record, associationType) {\n  return (record.associations?.[associationType]?.results || []).map(item => item.id);\n}\n\nconst deals = safeAll('Listar Deals').flatMap(item => item.json.results || []);\nconst owners = safeAll('Listar Owners').flatMap(item => item.json.results || []);\nconst contactResponses = safeAll('Leer Contactos Batch');\nconst lineItemResponses = safeAll('Leer Line Items Batch');\n\nconst ownerMap = new Map();\nfor (const owner of owners) {\n  if (owner.id) ownerMap.set(String(owner.id), owner);\n  if (owner.userId) ownerMap.set(String(owner.userId), owner);\n}\n\nconst contactMap = new Map();\nfor (const response of contactResponses) {\n  for (const contact of response.json.results || []) {\n    contactMap.set(String(contact.id), contact);\n  }\n}\n\nconst lineItemMap = new Map();\nfor (const response of lineItemResponses) {\n  for (const lineItem of response.json.results || []) {\n    lineItemMap.set(String(lineItem.id), lineItem);\n  }\n}\n\nconst result = deals.map(deal => {\n  const props = deal.properties || {};\n  const ownerId = props.hubspot_owner_id ? String(props.hubspot_owner_id) : null;\n\n  const contacts = getAssociationIds(deal, 'contacts')\n    .map(id => contactMap.get(String(id)))\n    .filter(Boolean)\n    .map(contact => ({\n      id: contact.id,\n      firstname: contact.properties?.firstname || null,\n      lastname: contact.properties?.lastname || null,\n      email: contact.properties?.email || null,\n      phone: contact.properties?.phone || null,\n      company: contact.properties?.company || null\n    }));\n\n  const lineItems = getAssociationIds(deal, 'line_items')\n    .map(id => lineItemMap.get(String(id)))\n    .filter(Boolean)\n    .map(item => ({\n      id: item.id,\n      name: item.properties?.name || null,\n      quantity: item.properties?.quantity || null,\n      price: item.properties?.price || null,\n      amount: item.properties?.amount || null,\n      hs_product_id: item.properties?.hs_product_id || null,\n      sku: item.properties?.sku || null\n    }));\n\n  const owner = ownerId ? ownerMap.get(ownerId) || null : null;\n\n  return {\n    dealId: deal.id,\n    dealName: props.dealname || null,\n    amount: props.amount || null,\n    dealStage: props.dealstage || null,\n    pipeline: props.pipeline || null,\n    closeDate: props.closedate || null,\n    createDate: props.createdate || null,\n    lastModifiedDate: props.hs_lastmodifieddate || null,\n    hubspotOwnerId: ownerId,\n    owner: owner\n      ? {\n          id: owner.id || null,\n          userId: owner.userId || null,\n          firstName: owner.firstName || null,\n          lastName: owner.lastName || null,\n          email: owner.email || null\n        }\n      : null,\n    contacts,\n    lineItems\n  };\n});\n\n// Un deal por item. Para un solo item con arreglo completo, cambia por:\n// return [{ json: { total: result.length, deals: result } }];\nreturn result.map(deal => ({ json: deal }));"
+      },
+      "id": "fe765d3b-e740-47ca-92f5-73bd9f6e4e10",
+      "name": "Construir Dataset Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2360,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Listar Deals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar Deals": {
+      "main": [
+        [
+          {
+            "node": "Listar Owners",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar Owners": {
+      "main": [
+        [
+          {
+            "node": "Preparar Chunks Contactos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Chunks Contactos": {
+      "main": [
+        [
+          {
+            "node": "Hay Contactos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hay Contactos": {
+      "main": [
+        [
+          {
+            "node": "Leer Contactos Batch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Chunks Line Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Contactos Batch": {
+      "main": [
+        [
+          {
+            "node": "Preparar Chunks Line Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Chunks Line Items": {
+      "main": [
+        [
+          {
+            "node": "Hay Line Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hay Line Items": {
+      "main": [
+        [
+          {
+            "node": "Leer Line Items Batch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Construir Dataset Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Line Items Batch": {
+      "main": [
+        [
+          {
+            "node": "Construir Dataset Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "84dab3e3-5e24-4eed-9be5-dcd5a3b84fbc",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

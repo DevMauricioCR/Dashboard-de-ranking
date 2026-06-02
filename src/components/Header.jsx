@@ -9,7 +9,7 @@ function timeAgo(date) {
   return `hace ${Math.floor(diff / 60)}min`
 }
 
-export default function Header({ lastUpdate }) {
+export default function Header({ lastUpdate, onRefreshNow, isRefreshingNow }) {
   const [ago, setAgo] = useState(timeAgo(lastUpdate))
 
   useEffect(() => {
@@ -52,6 +52,16 @@ export default function Header({ lastUpdate }) {
             {lastUpdate ? `Actualizado ${ago}` : 'En vivo'}
           </span>
         </div>
+        {onRefreshNow && (
+          <button
+            type="button"
+            className={styles.refreshBtn}
+            onClick={onRefreshNow}
+            disabled={isRefreshingNow}
+          >
+            {isRefreshingNow ? 'Actualizando...' : 'Actualizar ahora'}
+          </button>
+        )}
       </div>
     </header>
   )

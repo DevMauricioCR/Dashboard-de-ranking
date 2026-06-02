@@ -1,73 +1,90 @@
-import styles from './KpiCards.module.css'
+import { useState, useEffect } from 'react'
 
-const fmt = n => new Intl.NumberFormat('es-MX').format(n)
-const fmtMoney = n => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
+function useCountUp(target, duration = 1100) {
+  const [value, setValue] = useState(0)
+  useEffect(() => {
+    if (!target) { setValue(0); return }
+    const start = Date.now()
+    let raf
+    const tick = () => {
+      const p = Math.min((Date.now() - start) / duration, 1)
+      const ease = 1 - Math.pow(1 - p, 3)
+      setValue(Math.round(ease * target))
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [target, duration])
+  return value
+}
 
-function KpiCard({ icon, label, value, sub, color }) {
+const fmtNum   = n => new Intl.NumberFormat('es-MX').format(n)
+const fmtMoney = n => {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
+  if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}k`
+  return `$${n}`
+}
+
+function KpiCreados({ total }) {
+  const v = useCountUp(total)
   return (
-    <div className={styles.card} style={{ '--accent-local': color }}>
-      <div className={styles.iconWrap}>
-        <span className={styles.icon}>{icon}</span>
-      </div>
-      <p className={styles.label}>{label}</p>
-      <p className={styles.value}>{value}</p>
-      {sub && <p className={styles.sub}>{sub}</p>}
+    <div className="kpi">
+      <div className="kpi-lbl">Negocios creados</div>
+      <div className="kpi-val">{fmtNum(v)}</div>
+      <div className="kpi-sub">en el periodo</div>
     </div>
   )
 }
 
-function SkeletonCard() {
+function KpiCerrados({ total }) {
+  const v = useCountUp(total)
   return (
-    <div className={styles.card}>
-      <div className={`skeleton ${styles.skIcon}`} />
-      <div className={`skeleton ${styles.skLabel}`} />
-      <div className={`skeleton ${styles.skValue}`} />
+    <div className="kpi">
+      <div className="kpi-lbl">Negocios cerrados</div>
+      <div className="kpi-val">{fmtNum(v)}</div>
+      <div className="kpi-sub">acumulado del periodo</div>
+    </div>
+  )
+}
+
+function KpiMonto({ total }) {
+  const v = useCountUp(total)
+  return (
+    <div className="kpi accent">
+      <div className="kpi-lbl">Monto total</div>
+      <div className="kpi-val">{fmtMoney(v)}</div>
+      <div className="kpi-sub">acumulado del periodo</div>
+    </div>
+  )
+}
+
+function SkeletonKpi() {
+  return (
+    <div className="kpi">
+      <div className="skeleton" style={{ height: 9, width: 100, marginBottom: 12, borderRadius: 2 }} />
+      <div className="skeleton" style={{ height: 34, width: 120, marginBottom: 8, borderRadius: 2 }} />
+      <div className="skeleton" style={{ height: 9, width: 80,  borderRadius: 2 }} />
     </div>
   )
 }
 
 export default function KpiCards({ data, isLoading }) {
-  if (isLoading) return (
-    <div className={styles.grid}>
-      {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
-    </div>
-  )
+  if (isLoading) {
+    return (
+      <div className="kpi-row">
+        <SkeletonKpi />
+        <SkeletonKpi />
+        <SkeletonKpi />
+      </div>
+    )
+  }
   if (!data) return null
 
-  const cards = [
-    {
-      icon: '📞',
-      label: 'Leads contactados hoy',
-      value: fmt(data.totalLeadsHoy),
-      sub: 'llamadas registradas',
-      color: '#4f8ef7',
-    },
-    {
-      icon: '🏆',
-      label: 'Negocios cerrados',
-      value: fmt(data.negociosMes),
-      sub: 'este mes',
-      color: '#e8b84b',
-    },
-    {
-      icon: '💰',
-      label: 'Monto total',
-      value: fmtMoney(data.montoMes),
-      sub: 'acumulado del mes',
-      color: '#34d399',
-    },
-    {
-      icon: '⭐',
-      label: 'Asesor del día',
-      value: data.asesorDelDia,
-      sub: 'más negocios hoy',
-      color: '#7c5ce8',
-    },
-  ]
-
   return (
-    <div className={styles.grid}>
-      {cards.map(c => <KpiCard key={c.label} {...c} />)}
+    <div className="kpi-row">
+      <KpiCreados  total={data.totalLeadsHoy} />
+      <KpiCerrados total={data.negociosMes} />
+      <KpiMonto    total={data.montoMes} />
     </div>
   )
 }

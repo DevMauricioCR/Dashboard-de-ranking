@@ -65,3 +65,23 @@
   border: 0.5px solid rgba(251, 191, 36, 0.25);
   font-weight: 500;
 }
+
+.refreshBtn {
+  background: rgba(79, 142, 247, 0.12);
+  border: 0.5px solid rgba(79, 142, 247, 0.35);
+  border-radius: 20px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  transition: opacity .15s, border-color .15s;
+}
+
+.refreshBtn:hover:not(:disabled) {
+  border-color: rgba(79, 142, 247, 0.65);
+}
+
+.refreshBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
