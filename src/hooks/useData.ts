@@ -10,6 +10,8 @@ const DATASET_URL =
 
 const API_KEY = env.VITE_API_KEY;
 const REFRESH_INTERVAL = Number(env.VITE_REFRESH_INTERVAL || 60_000);
+const META_ASESOR_JR = 200_000;
+const META_ASESOR_SR = 500_000;
 
 export const isMockMode = false;
 
@@ -19,6 +21,8 @@ type HubspotOwner = {
   firstName?: string | null;
   lastName?: string | null;
   email?: string | null;
+  jobTitle?: string | null;
+  cargo?: string | null;
 };
 
 type HubspotContact = {
@@ -76,6 +80,36 @@ function toNumber(value: unknown) {
 
 function fullName(first?: string | null, last?: string | null) {
   return [first, last].filter(Boolean).join(' ').trim();
+}
+
+function getMetaMensual(cargo?: string | null) {
+  const normalized = String(cargo || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+  if (normalized.includes('asesor') && normalized.includes('sr')) return META_ASESOR_SR;
+  if (normalized.includes('asesor') && normalized.includes('jr')) return META_ASESOR_JR;
+  return 0;
+}
+
+function getMetaFactor(periodo?: string | null) {
+  return periodo === 'trimestral' ? 3 : 1;
+}
+
+function withMeta(row: any, periodo = 'mensual') {
+  const cargo = row.cargo || row.jobTitle || '';
+  const metaMensual = toNumber(row.metaMensual) || getMetaMensual(cargo);
+  const metaPeriodo = toNumber(row.metaPeriodo) || metaMensual * getMetaFactor(periodo);
+  const totalVentas = toNumber(row.totalVentas ?? row.monto);
+
+  return {
+    ...row,
+    cargo,
+    metaMensual,
+    metaPeriodo,
+    avanceMetaPct: metaPeriodo ? Math.round((totalVentas / metaPeriodo) * 100) : 0,
+  };
 }
 
 function parseDate(value?: string | null) {
@@ -217,16 +251,17 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
       if (Array.isArray(data?.ranking)) {
         return {
           ...data,
-          ranking: data.ranking.map((row: any, index: number) => ({
+          ranking: data.ranking.map((row: any, index: number) => withMeta({
             ...row,
             ownerId: row.ownerId || row.id || String(index + 1),
             nombre: row.nombre || row.asesor || 'Sin asesor asignado',
+            cargo: row.cargo || row.jobTitle || '',
             totalVentas: toNumber(row.totalVentas ?? row.monto),
             monto: toNumber(row.monto ?? row.totalVentas),
             numeroDeals: toNumber(row.numeroDeals ?? row.deals),
             deals: Array.isArray(row.deals) ? row.deals : [],
             posicion: row.posicion || row.rank || index + 1,
-          })),
+          }, periodo)),
         };
       }
 
@@ -244,6 +279,7 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
           grouped.set(ownerId, {
             ownerId,
             nombre,
+            cargo: deal.owner?.jobTitle || deal.owner?.cargo || '',
             totalVentas: 0,
             monto: 0,
             numeroDeals: 0,
@@ -268,11 +304,11 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
 
       const ranking = Array.from(grouped.values())
         .sort((a, b) => b.totalVentas - a.totalVentas)
-        .map((row, index) => ({
+        .map((row, index) => withMeta({
           ...row,
           posicion: index + 1,
           deals: row.dealsDetalle,
-        }));
+        }, periodo));
 
       const { start, end } = getPeriodRange(periodo);
       return {

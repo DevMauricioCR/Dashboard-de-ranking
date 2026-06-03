@@ -11,6 +11,16 @@ const fmtCompact = n => {
   return `$${Math.round(n)}`
 }
 
+const DEFAULT_MONTHLY_GOAL = 500_000
+const MONTHLY_GOALS = {
+  // 'Yuliana Rivera Fararoni': 500_000,
+}
+
+function getPeriodGoal(asesor) {
+  if (!asesor || asesor.nombre === 'Sin asesor asignado') return 0
+  return Number(asesor.metaPeriodo || asesor.metaMensual || MONTHLY_GOALS[asesor.nombre] || DEFAULT_MONTHLY_GOAL)
+}
+
 function initials(name = '') {
   const parts = name.trim().split(/\s+/)
   if (parts.length === 1) return name.substring(0, 2).toUpperCase()
@@ -26,6 +36,73 @@ function ShareBar({ pct, color = 'var(--gold)' }) {
   return (
     <div style={{ height: 2, background: 'var(--b2)', overflow: 'hidden', marginTop: 8 }}>
       <div ref={ref} style={{ height: '100%', width: 0, background: color, transition: 'width 1.1s cubic-bezier(0.16,1,0.3,1)' }} />
+    </div>
+  )
+}
+
+function GoalProgress({ sold, goal, color = 'var(--gold)' }) {
+  if (!goal) return null
+
+  const safeSold = Math.max(0, Number(sold) || 0)
+  const safeGoal = Math.max(1, Number(goal) || 1)
+  const remaining = Math.max(0, safeGoal - safeSold)
+  const progress = Math.min(100, (safeSold / safeGoal) * 100)
+  const isComplete = safeSold >= safeGoal
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        justifyContent: 'space-between',
+        gap: 10,
+        marginBottom: 7,
+      }}>
+        <div style={{
+          fontFamily: 'var(--sans)',
+          fontSize: 9,
+          color: 'var(--muted)',
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+        }}>
+          Meta del periodo
+        </div>
+        <div style={{
+          fontFamily: 'var(--serif)',
+          fontStyle: 'italic',
+          fontSize: 12,
+          color: isComplete ? 'var(--gold)' : 'var(--cream)',
+          whiteSpace: 'nowrap',
+        }}>
+          {fmtCompact(safeSold)} / {fmtCompact(safeGoal)}
+        </div>
+      </div>
+      <div style={{
+        height: 7,
+        background: 'var(--b2)',
+        border: '1px solid var(--b2)',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          width: `${progress}%`,
+          height: '100%',
+          background: isComplete ? 'var(--gold)' : color,
+          transition: 'width 0.9s cubic-bezier(0.16,1,0.3,1)',
+        }} />
+      </div>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        gap: 10,
+        marginTop: 6,
+        fontFamily: 'var(--sans)',
+        fontSize: 9,
+        color: 'var(--muted)',
+        letterSpacing: '0.04em',
+      }}>
+        <span>{fmtMXN(safeSold)} vendido</span>
+        <span>{isComplete ? 'Meta alcanzada' : `${fmtMXN(remaining)} faltan`}</span>
+      </div>
     </div>
   )
 }
@@ -116,6 +193,7 @@ export default function VistaEquipo({ periodo }) {
           const sharePct = (a.totalVentas / totalVentas) * 100
           const avg = Math.round(a.totalVentas / (a.numeroDeals || 1))
           const isOpen = expanded === a.ownerId
+          const periodGoal = getPeriodGoal(a)
 
           return (
             <div
@@ -193,6 +271,11 @@ export default function VistaEquipo({ periodo }) {
               </div>
 
               <ShareBar pct={sharePct} color={isTop ? 'var(--gold)' : isWarn ? 'var(--red-w)' : 'var(--warm1)'} />
+              <GoalProgress
+                sold={a.totalVentas}
+                goal={periodGoal}
+                color={isTop ? 'var(--gold)' : isWarn ? 'var(--red-w)' : 'var(--warm1)'}
+              />
 
               {/* expanded deals */}
               {isOpen && a.deals?.length > 0 && (
