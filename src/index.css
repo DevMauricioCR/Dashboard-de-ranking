@@ -39,9 +39,9 @@ html, body { height: 100%; }
   --red-w:   #a05030;
   --red-wd:  rgba(160,80,48,0.10);
 
-  --serif: 'Helvetica Local', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --sans:  'Helvetica Local', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --font-display: 'Helvetica Local', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --sans:  Inter, 'Segoe UI', Roboto, Arial, sans-serif;
+  --serif: var(--sans);
+  --font-display: var(--sans);
   --r:     8px;
   --r-sm:  4px;
 }
@@ -50,10 +50,16 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--sans);
+  font-style: normal;
+  font-synthesis-style: none;
   font-size: 13px;
   line-height: 1.5;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+}
+
+body, body * {
+  font-style: normal !important;
 }
 
 /* scrollbar */

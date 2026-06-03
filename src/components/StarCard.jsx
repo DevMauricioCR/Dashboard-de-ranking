@@ -68,7 +68,7 @@ export default function StarCard({ asesor, isLoading, totalEquipo }) {
   return (
     <div className="star-card" style={{ padding: 0, overflow: 'hidden' }}>
       {/* PHOTO AREA */}
-      <div style={{ position: 'relative', width: '100%', height: 180, overflow: 'hidden', background: 'rgba(0,0,0,0.18)' }}>
+      <div style={{ position: 'relative', width: '100%', height: 190, overflow: 'hidden', background: 'rgba(0,0,0,0.18)' }}>
         <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%', display: 'block' }}>
           <rect width="320" height="180" fill="rgba(0,0,0,0.10)" />
           <defs>
@@ -77,15 +77,16 @@ export default function StarCard({ asesor, isLoading, totalEquipo }) {
             </pattern>
           </defs>
           <rect x="0" y="0" width="320" height="180" fill="url(#hatch)" opacity="0.08" />
-          <ellipse cx="160" cy="230" rx="80" ry="60" fill="rgba(0,0,0,0.28)" />
-          <circle cx="160" cy="100" r="52" fill="rgba(0,0,0,0.22)" />
+          <ellipse cx="160" cy="230" rx="76" ry="54" fill="rgba(0,0,0,0.22)" />
+          <circle cx="160" cy="78" r="42" fill="rgba(0,0,0,0.18)" />
+          <circle cx="160" cy="78" r="42" fill="none" stroke="rgba(0,0,0,0.10)" strokeWidth="1" />
           <text
-            x="160" y="112"
+            x="160" y="91"
             textAnchor="middle"
             fontFamily="var(--sans)"
-            fontStyle="italic"
-            fontSize="40"
-            fill="rgba(0,0,0,0.40)"
+            fontWeight="700"
+            fontSize="34"
+            fill="rgba(0,0,0,0.44)"
           >
             {ini}
           </text>
@@ -109,10 +110,10 @@ export default function StarCard({ asesor, isLoading, totalEquipo }) {
         </div>
 
         {/* name overlay */}
-        <div style={{ position: 'absolute', bottom: 14, left: 16, right: 16 }}>
+        <div style={{ position: 'absolute', bottom: 18, left: 20, right: 20 }}>
           <div style={{
             fontFamily: 'var(--sans)', fontSize: 20, fontWeight: 'bold',
-            color: '#0a0a0a', lineHeight: 1.1, letterSpacing: '-0.03em',
+            color: '#0a0a0a', lineHeight: 1.15, letterSpacing: 0,
           }}>
             {asesor.nombre}
           </div>
