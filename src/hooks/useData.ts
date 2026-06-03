@@ -94,6 +94,13 @@ function getPeriodRange(periodo: string) {
 
   if (periodo === 'diario') return { start, end };
 
+  if (periodo === 'mes_pasado' || periodo === 'mes_anterior') {
+    start.setMonth(now.getMonth() - 1, 1);
+    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    previousMonthEnd.setHours(23, 59, 59, 999);
+    return { start, end: previousMonthEnd };
+  }
+
   if (periodo === 'trimestral') {
     const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
     start.setMonth(quarterStartMonth, 1);
@@ -158,7 +165,10 @@ function getLineItemTotal(item: HubspotLineItem) {
 
 async function fetchDataset(periodo = 'mensual', force = false) {
   const url = new URL(DATASET_URL);
-  url.searchParams.set('periodo', periodo);
+  const requestPeriod = periodo === 'mes_pasado' || periodo === 'mes_anterior'
+    ? 'trimestral'
+    : periodo;
+  url.searchParams.set('periodo', requestPeriod);
   if (force) url.searchParams.set('force', 'true');
 
   const res = await fetch(url.toString(), {

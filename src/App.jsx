@@ -14,6 +14,7 @@ import VistaAjustes from './components/VistaAjustes'
 const PERIODOS = [
   { value: 'diario',    label: 'Hoy' },
   { value: 'mensual',   label: 'Este mes' },
+  { value: 'mes_pasado', label: 'Mes pasado' },
   { value: 'trimestral', label: 'Trimestre' },
 ]
 
