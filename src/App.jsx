@@ -121,7 +121,7 @@ function PipelinePanel({ leads }) {
   )
 }
 
-const TV_VIEWS    = [0, 1, 2, 3]           // Ranking → Equipo → Deals → Reportes
+const TV_VIEWS    = [0, 1, 3]              // Ranking → Equipo → Reportes
 const TV_DURATION = 18_000                 // ms por vista
 const VIEW_NAMES  = ['Ranking', 'Equipo', 'Deals', 'Reportes']
 
