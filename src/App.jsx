@@ -331,7 +331,7 @@ export default function App() {
 
           {activeNav === 1 && <VistaEquipo periodo={periodo} />}
           {activeNav === 2 && <VistaDeals periodo={periodo} />}
-          {activeNav === 3 && <VistaReportes periodo={periodo} />}
+          {activeNav === 3 && <VistaReportes periodo={periodo} tvMode={tvMode} />}
 
           {activeNav === 0 && (
             <>

@@ -1187,8 +1187,14 @@ body, body * {
 }
 .tv-mode.view-report .reports-view {
   display: grid;
-  grid-template-rows: minmax(0, .9fr) minmax(0, 1.1fr);
+  grid-template-rows: minmax(0, 1.18fr) minmax(0, .82fr);
   gap: 12px;
+}
+.tv-mode.view-report .view-enter,
+.tv-mode.view-report .reports-view,
+.tv-mode.view-report .reports-grid .panel {
+  animation: none !important;
+  animation-delay: 0s !important;
 }
 .tv-mode.view-report .reports-grid {
   min-height: 0;
@@ -1198,22 +1204,36 @@ body, body * {
   display: flex;
   flex-direction: column;
 }
-.tv-mode.view-report .reports-grid .panel > div:last-child {
+.tv-mode.view-report .reports-grid .report-panel-body {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+.tv-mode.view-report .reports-grid .report-panel-body > .recharts-responsive-container {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.tv-mode.view-report .pipeline-chart-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .tv-mode .report-chart--main,
 .tv-mode .report-chart--timeline,
 .tv-mode .report-chart--pie {
   height: 100% !important;
 }
-.tv-mode .reports-grid .panel-head { padding: 16px 20px 13px; }
-.tv-mode .reports-grid .panel-title { font-size: 16px; }
-.tv-mode .reports-grid .panel-meta { font-size: 13px; }
-.tv-mode .reports-grid .recharts-text { font-size: 14px; }
-.tv-mode .reports-grid-main .recharts-yAxis .recharts-text { font-size: 14px; }
-.tv-mode .reports-grid-main .recharts-xAxis .recharts-text { font-size: 13px; }
-.tv-mode .reports-grid-pipeline .recharts-text { font-size: 13px; }
+.tv-mode .reports-grid .panel-head { padding: 18px 22px 15px; }
+.tv-mode .reports-grid .panel-title { font-size: 19px; }
+.tv-mode .reports-grid .panel-meta { font-size: 16px; }
+.tv-mode .reports-grid .recharts-text { font-size: 17px; }
+.tv-mode .reports-grid-main .recharts-yAxis .recharts-text { font-size: 17px; font-weight: 600; }
+.tv-mode .reports-grid-main .recharts-xAxis .recharts-text { font-size: 15px; }
+.tv-mode .reports-grid-pipeline .recharts-text { font-size: 16px; }
 .tv-mode .report-summary { display: none; }
 .tv-mode .body-grid { grid-template-columns: minmax(0, 1fr) clamp(320px, 24vw, 420px); gap: 12px; }
 .tv-mode .left-col, .tv-mode .right-col { gap: 12px; }

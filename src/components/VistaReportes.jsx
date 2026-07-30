@@ -27,7 +27,7 @@ function Panel({ title, meta, children, style }) {
         <span className="panel-title">{title}</span>
         {meta && <span className="panel-meta">{meta}</span>}
       </div>
-      <div style={{ padding: '16px 0 8px' }}>
+      <div className="report-panel-body" style={{ padding: '16px 0 8px' }}>
         {children}
       </div>
     </div>
@@ -60,7 +60,7 @@ function stageType(s) {
   return 'proceso'
 }
 
-export default function VistaReportes({ periodo }) {
+export default function VistaReportes({ periodo, tvMode = false }) {
   const rankQ  = useRankingAsesores(periodo)
   const prodQ  = useRankingProducto(periodo)
   const leadsQ = useLeadsContactados(periodo)
@@ -170,13 +170,13 @@ export default function VistaReportes({ periodo }) {
       {/* ROW 1: Ventas, llamadas y productos */}
       <div className="reports-grid reports-grid-main">
         <Panel title="Ventas por asesor" meta="Top 10">
-          <ResponsiveContainer className="report-chart report-chart--main" width="100%" height={260}>
-            <BarChart data={asesorData} layout="vertical" margin={{ top: 0, right: 16, bottom: 0, left: 8 }}>
+          <ResponsiveContainer className="report-chart report-chart--main" width="100%" height={tvMode ? '100%' : 260}>
+            <BarChart data={asesorData} layout="vertical" margin={{ top: 4, right: 20, bottom: 4, left: tvMode ? 18 : 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" horizontal={false} />
               <XAxis type="number" tickFormatter={compactMoney} tick={{ fill: 'var(--muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="asesor" width={118} interval={0} tick={{ fill: 'var(--text)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="asesor" width={tvMode ? 138 : 118} interval={0} tick={{ fill: 'var(--text)', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-              <Bar dataKey="ventas" name="Ventas" radius={[0, 3, 3, 0]} barSize={14} animationDuration={1100} animationBegin={120}>
+              <Bar dataKey="ventas" name="Ventas" radius={[0, 3, 3, 0]} barSize={tvMode ? 22 : 14} isAnimationActive={!tvMode} animationDuration={1100} animationBegin={120}>
                 {asesorData.map((_, i) => (
                   <Cell key={i} fill={HUD_COLORS[i % HUD_COLORS.length]} />
                 ))}
@@ -186,13 +186,13 @@ export default function VistaReportes({ periodo }) {
         </Panel>
 
         <Panel title="Llamadas por asesor" meta={`${totalLlamadas} total`}>
-          <ResponsiveContainer className="report-chart report-chart--main" width="100%" height={260}>
-            <BarChart data={callsData} layout="vertical" margin={{ top: 0, right: 20, bottom: 0, left: 8 }}>
+          <ResponsiveContainer className="report-chart report-chart--main" width="100%" height={tvMode ? '100%' : 260}>
+            <BarChart data={callsData} layout="vertical" margin={{ top: 4, right: 20, bottom: 4, left: tvMode ? 18 : 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" horizontal={false} />
               <XAxis type="number" allowDecimals={false} tick={{ fill: 'var(--muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="asesor" width={118} interval={0} tick={{ fill: 'var(--text)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="asesor" width={tvMode ? 138 : 118} interval={0} tick={{ fill: 'var(--text)', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-              <Bar dataKey="llamadas" name="Llamadas" radius={[0, 3, 3, 0]} barSize={14} animationDuration={1100} animationBegin={180}>
+              <Bar dataKey="llamadas" name="Llamadas" radius={[0, 3, 3, 0]} barSize={tvMode ? 22 : 14} isAnimationActive={!tvMode} animationDuration={1100} animationBegin={180}>
                 {callsData.map((_, i) => (
                   <Cell key={i} fill={HUD_COLORS[(i + 2) % HUD_COLORS.length]} />
                 ))}
@@ -202,13 +202,13 @@ export default function VistaReportes({ periodo }) {
         </Panel>
 
         <Panel title="Top productos" meta="por ingreso">
-          <ResponsiveContainer className="report-chart report-chart--main" width="100%" height={260}>
+          <ResponsiveContainer className="report-chart report-chart--main" width="100%" height={tvMode ? '100%' : 260}>
             <BarChart data={prodData} margin={{ top: 0, right: 16, bottom: 50, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" vertical={false} />
               <XAxis dataKey="producto" angle={-35} textAnchor="end" interval={0} tick={{ fill: 'var(--muted)', fontSize: 9 }} axisLine={false} tickLine={false} />
               <YAxis tickFormatter={compactMoney} tick={{ fill: 'var(--muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-              <Bar dataKey="ventas" name="Ventas" radius={[3, 3, 0, 0]} barSize={20} animationDuration={1100} animationBegin={220}>
+              <Bar dataKey="ventas" name="Ventas" radius={[3, 3, 0, 0]} barSize={tvMode ? 30 : 20} isAnimationActive={!tvMode} animationDuration={1100} animationBegin={220}>
                 {prodData.map((_, i) => (
                   <Cell key={i} fill={HUD_COLORS[i % HUD_COLORS.length]} />
                 ))}
@@ -221,7 +221,7 @@ export default function VistaReportes({ periodo }) {
       {/* ROW 2: Timeline + Pipeline */}
       <div className="reports-grid reports-grid-pipeline">
         <Panel title="Ventas diarias" meta="Negocios cerrados">
-          <ResponsiveContainer className="report-chart report-chart--timeline" width="100%" height={200}>
+          <ResponsiveContainer className="report-chart report-chart--timeline" width="100%" height={tvMode ? '100%' : 200}>
             <AreaChart data={timeline} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
               <defs>
                 <linearGradient id="goldArea" x1="0" y1="0" x2="0" y2="1">
@@ -234,24 +234,25 @@ export default function VistaReportes({ periodo }) {
               <XAxis dataKey="fecha" tick={{ fill: 'var(--muted)', fontSize: 9 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
               <YAxis tickFormatter={compactMoney} tick={{ fill: 'var(--muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--gold)', strokeWidth: 1 }} />
-              <Area type="monotone" dataKey="ventas" name="Ventas" stroke="#00ffd6" fill="url(#goldArea)" strokeWidth={2} dot={false} animationDuration={1400} animationBegin={280} />
+              <Area type="monotone" dataKey="ventas" name="Ventas" stroke="#00ffd6" fill="url(#goldArea)" strokeWidth={tvMode ? 3 : 2} dot={false} isAnimationActive={!tvMode} animationDuration={1400} animationBegin={280} />
             </AreaChart>
           </ResponsiveContainer>
         </Panel>
 
         <Panel title="Pipeline" meta={`${leads.length} total`}>
-          <div style={{ padding: '0 16px' }}>
+          <div className="pipeline-chart-content" style={{ padding: '0 16px' }}>
             {/* pie chart */}
-            <ResponsiveContainer className="report-chart report-chart--pie" width="100%" height={130}>
+            <ResponsiveContainer className="report-chart report-chart--pie" width="100%" height={tvMode ? '68%' : 130}>
               <PieChart>
                 <Pie
                   data={pipeline}
                   cx="50%"
                   cy="50%"
-                  innerRadius={35}
-                  outerRadius={55}
+                  innerRadius={tvMode ? 58 : 35}
+                  outerRadius={tvMode ? 88 : 55}
                   paddingAngle={2}
                   dataKey="value"
+                  isAnimationActive={!tvMode}
                   animationDuration={1200}
                   animationBegin={360}
                 >
