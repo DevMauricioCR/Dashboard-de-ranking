@@ -349,7 +349,7 @@ export default function App() {
                     isLoading={ranking.isLoading}
                     totalEquipo={kpisData.montoMes}
                   />
-                  <PipelinePanel leads={leadsRows} />
+                  {!tvMode && <PipelinePanel leads={leadsRows} />}
                   <RankingProducto periodo={periodo} />
                 </div>
               </div>

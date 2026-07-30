@@ -1230,8 +1230,9 @@ body, body * {
 }
 .pipeline-donut {
   position: relative;
-  width: min(112px, 82%);
-  aspect-ratio: 1;
+  width: 112px;
+  height: 112px;
+  max-width: 82%;
   border-radius: 50%;
   box-shadow: 0 0 18px rgba(0,255,214,.12);
 }
@@ -1248,7 +1249,21 @@ body, body * {
   height: auto;
 }
 .tv-mode .pipeline-donut {
-  width: min(176px, 68%, 24vh);
+  width: 150px;
+  height: 150px;
+  max-width: none;
+}
+@media (max-height: 800px) {
+  .tv-mode .pipeline-donut {
+    width: 120px;
+    height: 120px;
+  }
+}
+@media (min-height: 1000px) {
+  .tv-mode .pipeline-donut {
+    width: 176px;
+    height: 176px;
+  }
 }
 .tv-mode .report-chart--main,
 .tv-mode .report-chart--timeline,
@@ -1261,6 +1276,7 @@ body, body * {
 .tv-mode .reports-grid .recharts-text { font-size: 17px; }
 .tv-mode .reports-grid-main .recharts-yAxis .recharts-text { font-size: 15px; font-weight: 600; }
 .tv-mode .reports-grid-main .recharts-xAxis .recharts-text { font-size: 15px; }
+.tv-mode .reports-grid-main .panel:nth-child(3) .recharts-xAxis .recharts-text { font-size: 11px; }
 .tv-mode .reports-grid-pipeline .recharts-text { font-size: 16px; }
 .tv-mode .report-summary { display: none; }
 .tv-mode .body-grid { grid-template-columns: minmax(0, 1fr) clamp(320px, 24vw, 420px); gap: 12px; }
