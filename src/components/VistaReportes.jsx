@@ -15,9 +15,9 @@ const compactMoney = n => {
   return `$${Math.round(n)}`
 }
 
-const WARM_COLORS = [
-  '#c8a96e','#b87333','#8b7355','#d4c4a8','#5c4a35',
-  '#a05030','#3a3530','#e8c87a','#7a5a3a','#c0a060',
+const HUD_COLORS = [
+  '#00ffd6','#4fd1ff','#8a5cff','#ff2e7e','#ffb800',
+  '#00a88f','#bda7ff','#ff6b9f','#7fd9c8','#ffd166',
 ]
 
 function Panel({ title, meta, children, style }) {
@@ -71,6 +71,17 @@ export default function VistaReportes({ periodo }) {
 
   const isLoading = rankQ.isLoading || prodQ.isLoading || leadsQ.isLoading
 
+  const callsByAdvisor = useMemo(() => leads.reduce((acc, lead) => {
+    const key = lead.asesorId || lead.asesor || ''
+    acc[key] = (acc[key] || 0) + (Number(lead.totalLlamadas) || 0)
+    return acc
+  }, {}), [leads])
+  const getAdvisorCalls = asesor =>
+    Number(asesor.totalLlamadas) ||
+    callsByAdvisor[asesor.ownerId] ||
+    callsByAdvisor[asesor.nombre] ||
+    0
+
   // Timeline: group leads by date
   const timeline = useMemo(() => {
     const byDay = new Map()
@@ -96,18 +107,26 @@ export default function VistaReportes({ periodo }) {
     const proceso  = leads.filter(l => stageType(l.estadoNegocio) === 'proceso').length
     const perdidos = leads.filter(l => stageType(l.estadoNegocio) === 'perdido').length
     return [
-      { name: 'Ganados',    value: ganados,  fill: '#c8a96e' },
-      { name: 'En proceso', value: proceso,  fill: '#8b7355' },
-      { name: 'Perdidos',   value: perdidos, fill: '#a05030' },
+      { name: 'Ganados',    value: ganados,  fill: '#00ffd6' },
+      { name: 'En proceso', value: proceso,  fill: '#8a5cff' },
+      { name: 'Perdidos',   value: perdidos, fill: '#ff2e7e' },
     ].filter(d => d.value > 0)
   }, [leads])
 
   // Asesor chart data (top 10)
   const asesorData = ranking.slice(0, 10).map(a => ({
-    asesor: a.nombre.split(' ')[0],
+    asesor: a.nombre.trim().split(/\s+/).slice(0, 2).join(' '),
     ventas: a.totalVentas,
     deals:  a.numeroDeals,
+    llamadas: getAdvisorCalls(a),
   }))
+  const callsData = ranking
+    .map(a => ({
+      asesor: a.nombre.trim().split(/\s+/).slice(0, 2).join(' '),
+      llamadas: getAdvisorCalls(a),
+    }))
+    .sort((a, b) => b.llamadas - a.llamadas)
+    .slice(0, 10)
 
   // Product chart data (top 8)
   const shortName = name => {
@@ -128,12 +147,13 @@ export default function VistaReportes({ periodo }) {
 
   const totalVentas = ranking.reduce((s, a) => s + a.totalVentas, 0)
   const totalDeals  = ranking.reduce((s, a) => s + a.numeroDeals, 0)
+  const totalLlamadas = ranking.reduce((s, a) => s + getAdvisorCalls(a), 0)
   const avgTicket   = totalDeals > 0 ? totalVentas / totalDeals : 0
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, animation: 'up 0.5s ease both' }}>
+    <div className="reports-view">
       {/* HEADER */}
-      <div style={{ paddingBottom: 16, borderBottom: '1px solid var(--b2)' }}>
+      <div className="reports-header" style={{ paddingBottom: 16, borderBottom: '1px solid var(--b2)' }}>
         <div style={{ fontSize: 9, color: 'var(--muted)', letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 4 }}>
           Reportes
         </div>
@@ -142,23 +162,39 @@ export default function VistaReportes({ periodo }) {
             {fmtMXN(totalVentas)}
           </div>
           <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13, color: 'var(--muted)' }}>
-            {totalDeals} deals &nbsp;·&nbsp; {fmtMXN(Math.round(avgTicket))} ticket prom.
+            {totalDeals} deals &nbsp;·&nbsp; {totalLlamadas} llamadas &nbsp;·&nbsp; {fmtMXN(Math.round(avgTicket))} ticket prom.
           </div>
         </div>
       </div>
 
-      {/* ROW 1: Ventas por asesor + Top productos */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      {/* ROW 1: Ventas, llamadas y productos */}
+      <div className="reports-grid reports-grid-main">
         <Panel title="Ventas por asesor" meta="Top 10">
-          <ResponsiveContainer width="100%" height={260}>
+          <ResponsiveContainer className="report-chart report-chart--main" width="100%" height={260}>
             <BarChart data={asesorData} layout="vertical" margin={{ top: 0, right: 16, bottom: 0, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" horizontal={false} />
               <XAxis type="number" tickFormatter={compactMoney} tick={{ fill: 'var(--muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="asesor" width={72} tick={{ fill: 'var(--text)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="asesor" width={118} interval={0} tick={{ fill: 'var(--text)', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-              <Bar dataKey="ventas" name="Ventas" radius={[0, 3, 3, 0]} barSize={14}>
+              <Bar dataKey="ventas" name="Ventas" radius={[0, 3, 3, 0]} barSize={14} animationDuration={1100} animationBegin={120}>
                 {asesorData.map((_, i) => (
-                  <Cell key={i} fill={i === 0 ? '#c8a96e' : i < 3 ? '#8b7355' : '#3a3530'} />
+                  <Cell key={i} fill={HUD_COLORS[i % HUD_COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </Panel>
+
+        <Panel title="Llamadas por asesor" meta={`${totalLlamadas} total`}>
+          <ResponsiveContainer className="report-chart report-chart--main" width="100%" height={260}>
+            <BarChart data={callsData} layout="vertical" margin={{ top: 0, right: 20, bottom: 0, left: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" horizontal={false} />
+              <XAxis type="number" allowDecimals={false} tick={{ fill: 'var(--muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="asesor" width={118} interval={0} tick={{ fill: 'var(--text)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+              <Bar dataKey="llamadas" name="Llamadas" radius={[0, 3, 3, 0]} barSize={14} animationDuration={1100} animationBegin={180}>
+                {callsData.map((_, i) => (
+                  <Cell key={i} fill={HUD_COLORS[(i + 2) % HUD_COLORS.length]} />
                 ))}
               </Bar>
             </BarChart>
@@ -166,15 +202,15 @@ export default function VistaReportes({ periodo }) {
         </Panel>
 
         <Panel title="Top productos" meta="por ingreso">
-          <ResponsiveContainer width="100%" height={260}>
+          <ResponsiveContainer className="report-chart report-chart--main" width="100%" height={260}>
             <BarChart data={prodData} margin={{ top: 0, right: 16, bottom: 50, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" vertical={false} />
               <XAxis dataKey="producto" angle={-35} textAnchor="end" interval={0} tick={{ fill: 'var(--muted)', fontSize: 9 }} axisLine={false} tickLine={false} />
               <YAxis tickFormatter={compactMoney} tick={{ fill: 'var(--muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-              <Bar dataKey="ventas" name="Ventas" radius={[3, 3, 0, 0]} barSize={20}>
+              <Bar dataKey="ventas" name="Ventas" radius={[3, 3, 0, 0]} barSize={20} animationDuration={1100} animationBegin={220}>
                 {prodData.map((_, i) => (
-                  <Cell key={i} fill={WARM_COLORS[i % WARM_COLORS.length]} />
+                  <Cell key={i} fill={HUD_COLORS[i % HUD_COLORS.length]} />
                 ))}
               </Bar>
             </BarChart>
@@ -183,21 +219,22 @@ export default function VistaReportes({ periodo }) {
       </div>
 
       {/* ROW 2: Timeline + Pipeline */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20 }}>
+      <div className="reports-grid reports-grid-pipeline">
         <Panel title="Ventas diarias" meta="Negocios cerrados">
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer className="report-chart report-chart--timeline" width="100%" height={200}>
             <AreaChart data={timeline} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
               <defs>
                 <linearGradient id="goldArea" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#c8a96e" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#c8a96e" stopOpacity={0.02} />
+                  <stop offset="5%"  stopColor="#00ffd6" stopOpacity={0.38} />
+                  <stop offset="55%" stopColor="#8a5cff" stopOpacity={0.18} />
+                  <stop offset="95%" stopColor="#ff2e7e" stopOpacity={0.02} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" />
               <XAxis dataKey="fecha" tick={{ fill: 'var(--muted)', fontSize: 9 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
               <YAxis tickFormatter={compactMoney} tick={{ fill: 'var(--muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--gold)', strokeWidth: 1 }} />
-              <Area type="monotone" dataKey="ventas" name="Ventas" stroke="#c8a96e" fill="url(#goldArea)" strokeWidth={1.5} dot={false} />
+              <Area type="monotone" dataKey="ventas" name="Ventas" stroke="#00ffd6" fill="url(#goldArea)" strokeWidth={2} dot={false} animationDuration={1400} animationBegin={280} />
             </AreaChart>
           </ResponsiveContainer>
         </Panel>
@@ -205,7 +242,7 @@ export default function VistaReportes({ periodo }) {
         <Panel title="Pipeline" meta={`${leads.length} total`}>
           <div style={{ padding: '0 16px' }}>
             {/* pie chart */}
-            <ResponsiveContainer width="100%" height={130}>
+            <ResponsiveContainer className="report-chart report-chart--pie" width="100%" height={130}>
               <PieChart>
                 <Pie
                   data={pipeline}
@@ -215,6 +252,8 @@ export default function VistaReportes({ periodo }) {
                   outerRadius={55}
                   paddingAngle={2}
                   dataKey="value"
+                  animationDuration={1200}
+                  animationBegin={360}
                 >
                   {pipeline.map((entry, i) => (
                     <Cell key={i} fill={entry.fill} stroke="none" />
@@ -247,27 +286,29 @@ export default function VistaReportes({ periodo }) {
       </div>
 
       {/* ROW 3: Tabla resumen asesores */}
+      <div className="report-summary">
       <Panel title="Resumen por asesor" meta={`${ranking.length} asesores`}>
         <div style={{ overflowX: 'auto' }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '32px 1fr 80px 100px 120px 120px',
+            gridTemplateColumns: '32px 1fr 70px 85px 100px 120px 120px',
             padding: '6px 18px',
             borderBottom: '1px solid var(--b2)',
             gap: 8,
           }}>
-            {['#','Asesor','Deals','Promedio','Total','Share'].map((h, i) => (
+            {['#','Asesor','Deals','Llamadas','Promedio','Total','Share'].map((h, i) => (
               <div key={h} className="col-hdr" style={i > 2 ? { textAlign: 'right' } : {}}>{h}</div>
             ))}
           </div>
           {ranking.map(a => {
             const pct = (a.totalVentas / (totalVentas || 1) * 100).toFixed(1)
+            const accent = HUD_COLORS[(Math.max(1, a.posicion) - 1) % HUD_COLORS.length]
             return (
               <div
                 key={a.ownerId}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '32px 1fr 80px 100px 120px 120px',
+                  gridTemplateColumns: '32px 1fr 70px 85px 100px 120px 120px',
                   padding: '9px 18px',
                   borderBottom: '1px solid var(--b1)',
                   gap: 8,
@@ -279,11 +320,12 @@ export default function VistaReportes({ periodo }) {
                 <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--dim)', fontSize: 13 }}>{a.posicion}</div>
                 <div style={{ fontSize: 12, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.nombre}</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>{a.numeroDeals}</div>
+                <div style={{ fontSize: 11, color: 'var(--cyan)' }}>{getAdvisorCalls(a)}</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'right' }}>{fmtMXN(Math.round(a.totalVentas / (a.numeroDeals || 1)))}</div>
-                <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13, color: 'var(--text)', textAlign: 'right' }}>{fmtMXN(a.totalVentas)}</div>
+                <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13, color: accent, textAlign: 'right' }}>{fmtMXN(a.totalVentas)}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
                   <div style={{ flex: 1, height: 1, background: 'var(--b3)', overflow: 'hidden', maxWidth: 60 }}>
-                    <div style={{ height: '100%', width: pct + '%', background: a.posicion === 1 ? 'var(--gold)' : 'var(--warm1)' }} />
+                    <div style={{ height: '100%', width: pct + '%', background: accent, boxShadow: `0 0 7px ${accent}` }} />
                   </div>
                   <span style={{ fontFamily: 'var(--sans)', fontSize: 9, color: 'var(--dim)', width: 32, textAlign: 'right' }}>{pct}%</span>
                 </div>
@@ -292,6 +334,7 @@ export default function VistaReportes({ periodo }) {
           })}
         </div>
       </Panel>
+      </div>
     </div>
   )
 }

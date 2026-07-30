@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef } from 'react'
 import { useRankingAsesores } from '../hooks/useData'
+import AdvisorAvatar from './AdvisorAvatar'
 
 const fmtMXN = n => new Intl.NumberFormat('es-MX', {
   style: 'currency', currency: 'MXN', maximumFractionDigits: 0,
@@ -55,7 +56,7 @@ function RowDetail({ asesor }) {
       <div style={{ padding: '14px 16px', borderLeft: '1px solid var(--b2)' }}>
         <div style={{ fontFamily: 'var(--sans)', fontSize: 9, color: 'var(--muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Meta del periodo</div>
         <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 22, color: 'var(--text)' }}>
-          {metaPeriodo ? `${fmtMXN(metaPeriodo)} Â· ${fmtPct(asesor.avanceMetaPct)}` : 'Sin meta'}
+          {metaPeriodo ? `${fmtMXN(metaPeriodo)} · ${fmtPct(asesor.avanceMetaPct)}` : 'Sin meta'}
         </div>
       </div>
     </div>
@@ -72,7 +73,7 @@ export default function RankingPodio({ periodo }) {
   const max   = top3[0]?.totalVentas || 1
 
   const periodLabel = desdeISO && hastaISO
-    ? `${fmtDate(desdeISO)} â€” ${fmtDate(hastaISO)}`
+    ? `${fmtDate(desdeISO)} — ${fmtDate(hastaISO)}`
     : ''
 
   if (isLoading) {
@@ -81,7 +82,7 @@ export default function RankingPodio({ periodo }) {
         <div className="panel-head">
           <span className="panel-title">Ranking del periodo</span>
         </div>
-        <div className="state-box">Cargando rankingâ€¦</div>
+        <div className="state-box">Cargando ranking…</div>
       </div>
     )
   }
@@ -123,7 +124,7 @@ export default function RankingPodio({ periodo }) {
       <div className="panel-head">
         <span className="panel-title">Ranking del periodo</span>
         <span className="panel-meta">
-          {periodLabel}{totalDeals ? ` Â· ${totalDeals} deals cerrados` : ''}
+          {periodLabel}{totalDeals ? ` · ${totalDeals} deals cerrados` : ''}
         </span>
       </div>
 
@@ -132,13 +133,13 @@ export default function RankingPodio({ periodo }) {
         <div className="podium">
           {podOrder.map((a, i) => a && (
             <div key={a.ownerId} className={`pod ${podClass[i]}`}>
-              <div className="pod-rank">{a.posicion}Â° lugar</div>
-              <div className="pod-av">{initials(a.nombre)}</div>
+              <div className="pod-rank">{a.posicion}° lugar</div>
+              <AdvisorAvatar name={a.nombre} initials={initials(a.nombre)} className="pod-av" />
               <div className="pod-name">{a.nombre}</div>
               {a.cargo && <div className="pod-deals">{a.cargo}</div>}
               <div className="pod-amount">{fmtMXN(a.totalVentas)}</div>
               <div className="pod-deals">
-                {a.numeroDeals} deals &nbsp;Â·&nbsp; {fmtMXN(Math.round(a.totalVentas / (a.numeroDeals || 1)))} promedio
+                {a.numeroDeals} deals &nbsp;·&nbsp; {fmtMXN(Math.round(a.totalVentas / (a.numeroDeals || 1)))} promedio
               </div>
               <div className="pod-deals">
                 {(a.metaPeriodo || a.metaMensual) ? `Meta ${fmtMXN(a.metaPeriodo || a.metaMensual)} · ${fmtPct(a.avanceMetaPct)}` : 'Sin meta asignada'}
@@ -174,12 +175,12 @@ export default function RankingPodio({ periodo }) {
           <div key={a.ownerId}>
             <div
               className={`rrow${isWarn ? ' warn-row' : ''}`}
-              style={isOpen ? { background: 'rgba(200,169,110,0.04)' } : {}}
+              style={isOpen ? { background: 'rgba(0,255,214,0.04)' } : {}}
               onClick={() => setExpanded(isOpen ? null : a.ownerId)}
             >
               <div className="rpos">{a.posicion}</div>
               <div className="rav">
-                <div className="av-sm">{initials(a.nombre)}</div>
+                <AdvisorAvatar name={a.nombre} initials={initials(a.nombre)} className="av-sm" />
                 <span className="rname">
                   {a.nombre}
                   {a.cargo && <small style={{ display: 'block', color: 'var(--muted)', fontSize: 10, marginTop: 2 }}>{a.cargo}</small>}

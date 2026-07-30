@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useRankingProducto } from '../hooks/useData'
 
-const PROD_COLORS = ['#c8a96e', '#b87333', '#8b7355', '#5c4a35', '#3a3530', '#272727']
+const PROD_COLORS = ['#00ffd6', '#4fd1ff', '#8a5cff', '#ff2e7e', '#ffb800', '#00a88f']
 
 const shortName = name => {
   const words = name.trim().split(/\s+/)

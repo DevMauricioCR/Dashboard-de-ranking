@@ -46,7 +46,7 @@ function Toggle({ value, onChange }) {
         position: 'absolute',
         top: 2, left: value ? 16 : 2,
         width: 14, height: 14,
-        background: value ? '#111' : 'var(--muted)',
+        background: value ? '#00110d' : 'var(--muted)',
         borderRadius: '50%',
         transition: 'left .2s',
       }} />
@@ -155,7 +155,7 @@ export default function VistaAjustes({
                   textTransform: 'uppercase',
                   cursor: 'pointer',
                   background: defaultPeriodo === p.value ? 'var(--gold)' : 'transparent',
-                  color: defaultPeriodo === p.value ? '#111' : 'var(--muted)',
+                  color: defaultPeriodo === p.value ? '#00110d' : 'var(--muted)',
                   fontWeight: defaultPeriodo === p.value ? 'bold' : 'normal',
                   borderRight: '1px solid var(--b2)',
                   transition: 'all .15s',

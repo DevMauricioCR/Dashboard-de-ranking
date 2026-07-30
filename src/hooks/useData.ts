@@ -32,6 +32,9 @@ type HubspotContact = {
   email?: string | null;
   phone?: string | null;
   company?: string | null;
+  totalLlamadas?: string | number | null;
+  numeroLlamadas?: string | number | null;
+  calls?: string | number | any[] | null;
 };
 
 type HubspotLineItem = {
@@ -63,6 +66,20 @@ type HubspotDeal = {
   owner?: HubspotOwner | null;
   contacts?: HubspotContact[];
   lineItems?: HubspotLineItem[];
+  totalLlamadas?: string | number | null;
+  numeroLlamadas?: string | number | null;
+  llamadas?: string | number | any[] | null;
+  calls?: string | number | any[] | null;
+};
+
+type HubspotCall = {
+  id?: string | null;
+  ownerId?: string | null;
+  timestamp?: string | null;
+  status?: string | null;
+  duration?: string | number | null;
+  contactIds?: Array<string | number>;
+  dealIds?: Array<string | number>;
 };
 
 function toArrayPayload(data: any): HubspotDeal[] {
@@ -73,9 +90,29 @@ function toArrayPayload(data: any): HubspotDeal[] {
   return [];
 }
 
+function toCallsPayload(data: any): HubspotCall[] {
+  if (Array.isArray(data?.calls)) return data.calls;
+  if (Array.isArray(data?.llamadas)) return data.llamadas;
+  return [];
+}
+
 function toNumber(value: unknown) {
   const number = Number(value || 0);
   return Number.isFinite(number) ? number : 0;
+}
+
+function getCallCount(source: any) {
+  const value =
+    source?.totalLlamadas ??
+    source?.numeroLlamadas ??
+    source?.llamadasRegistradas ??
+    source?.callCount ??
+    source?.callsCount ??
+    source?.llamadas ??
+    source?.calls ??
+    0;
+
+  return Array.isArray(value) ? value.length : toNumber(value);
 }
 
 function fullName(first?: string | null, last?: string | null) {
@@ -259,6 +296,7 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
             totalVentas: toNumber(row.totalVentas ?? row.monto),
             monto: toNumber(row.monto ?? row.totalVentas),
             numeroDeals: toNumber(row.numeroDeals ?? row.deals),
+            totalLlamadas: getCallCount(row),
             deals: Array.isArray(row.deals) ? row.deals : [],
             posicion: row.posicion || row.rank || index + 1,
           }, periodo)),
@@ -266,6 +304,7 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
       }
 
       const deals = filterDealsByPeriod(toArrayPayload(data), periodo).filter(isClosedWon);
+      const calls = toCallsPayload(data);
       const grouped = new Map<string, any>();
 
       for (const deal of deals) {
@@ -285,6 +324,7 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
             numeroDeals: 0,
             deals: 0,
             dealsDetalle: [],
+            totalLlamadas: 0,
           });
         }
 
@@ -293,6 +333,7 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
         row.totalVentas += monto;
         row.monto += monto;
         row.numeroDeals += 1;
+        if (!calls.length) row.totalLlamadas += getCallCount(deal);
         row.deals += 1;
         row.dealsDetalle.push({
           id: deal.dealId,
@@ -300,6 +341,12 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
           monto,
           closedate: deal.closeDate,
         });
+      }
+
+      for (const call of calls) {
+        const ownerId = String(call.ownerId || '');
+        const row = grouped.get(ownerId);
+        if (row) row.totalLlamadas += 1;
       }
 
       const ranking = Array.from(grouped.values())
@@ -330,7 +377,15 @@ export function useLeadsContactados(periodo = 'mensual', interval = REFRESH_INTE
     staleTime: Math.max(0, interval - 5_000),
     retry: 2,
     select: (data) => {
-      if (Array.isArray(data?.leads)) return data;
+      if (Array.isArray(data?.leads)) {
+        return {
+          ...data,
+          leads: data.leads.map((lead: any) => ({
+            ...lead,
+            totalLlamadas: getCallCount(lead),
+          })),
+        };
+      }
       if (Array.isArray(data?.ranking)) {
         return {
           leads: [],
@@ -341,6 +396,7 @@ export function useLeadsContactados(periodo = 'mensual', interval = REFRESH_INTE
       }
 
       const deals = filterDealsByPeriod(toArrayPayload(data), periodo);
+      const calls = toCallsPayload(data);
       const leads = deals.flatMap((deal) => {
         const asesor =
           fullName(deal.owner?.firstName, deal.owner?.lastName) ||
@@ -351,7 +407,21 @@ export function useLeadsContactados(periodo = 'mensual', interval = REFRESH_INTE
           ? deal.contacts
           : [{ id: deal.dealId, firstname: deal.dealName || 'Sin contacto' }];
 
-        return contacts.map((contact) => ({
+        return contacts.map((contact, contactIndex) => {
+          const contactId = String(contact.id || '');
+          const dealId = String(deal.dealId || '');
+          const relatedCalls = calls.filter((call) => {
+            const contactMatch = (call.contactIds || []).map(String).includes(contactId);
+            const dealMatch = (call.dealIds || []).map(String).includes(dealId);
+            return contactMatch || dealMatch;
+          });
+          const latestCall = relatedCalls
+            .map((call) => call.timestamp)
+            .filter(Boolean)
+            .sort()
+            .at(-1);
+
+          return ({
           contactId: contact.id || deal.dealId,
           nombre: fullName(contact.firstname, contact.lastname) || contact.company || deal.dealName || 'Sin nombre',
           email: contact.email || '',
@@ -362,8 +432,11 @@ export function useLeadsContactados(periodo = 'mensual', interval = REFRESH_INTE
           dealNombre: deal.dealName || 'Sin producto',
           monto: toNumber(deal.amount),
           estadoNegocio: deal.dealStage || '',
-          ultimaLlamada: deal.closeDate || deal.createDate || '',
-        }));
+          ultimaLlamada: latestCall || deal.closeDate || deal.createDate || '',
+          totalLlamadas: relatedCalls.length || getCallCount(contact) || (contactIndex === 0 ? getCallCount(deal) : 0),
+          callIds: relatedCalls.map((call) => call.id).filter(Boolean),
+          });
+        });
       });
 
       const { start } = getPeriodRange(periodo);

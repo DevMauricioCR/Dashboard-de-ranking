@@ -1,7 +1,11 @@
 .wallboard {
   width: 100vw;
   min-height: 100vh;
-  background: #0d0f14;
+  background:
+    linear-gradient(rgba(0,255,214,.045) 1px, transparent 1px) 0 0/38px 38px,
+    linear-gradient(90deg, rgba(0,255,214,.045) 1px, transparent 1px) 0 0/38px 38px,
+    radial-gradient(ellipse 900px 480px at 10% -10%, rgba(0,255,214,.08), transparent 60%),
+    #050708;
   color: var(--text-1);
   padding: 20px;
   overflow: hidden;
@@ -59,9 +63,9 @@
 .panel {
   min-width: 0;
   min-height: 0;
-  background: var(--bg-card);
-  border: 0.5px solid var(--border);
-  border-radius: var(--r-lg);
+  background: rgba(10,15,18,.95);
+  border: 1px solid rgba(0,255,214,.16);
+  border-radius: 0;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -81,6 +85,11 @@
   font-weight: 700;
 }
 
+.panelHeader h2::before {
+  content: '▸ ';
+  color: #00ffd6;
+}
+
 .panelHeader span {
   color: var(--text-3);
   font-size: 12px;
@@ -92,9 +101,9 @@
 }
 
 .tooltip {
-  background: rgba(19, 22, 30, 0.96);
-  border: 0.5px solid var(--border-hi);
-  border-radius: var(--r-sm);
+  background: rgba(10,15,18,.98);
+  border: 1px solid rgba(0,255,214,.3);
+  border-radius: 0;
   padding: 8px 10px;
   color: var(--text-1);
   font-size: 12px;
@@ -184,7 +193,7 @@
 
 .stageTrack {
   height: 7px;
-  border-radius: 999px;
+  border-radius: 0;
   background: rgba(255,255,255,.07);
   overflow: hidden;
 }
@@ -192,7 +201,7 @@
 .stageFill {
   height: 100%;
   min-width: 3px;
-  border-radius: inherit;
+  border-radius: 0;
 }
 
 .state {

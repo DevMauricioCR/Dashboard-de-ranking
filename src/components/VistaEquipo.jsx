@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { useRankingAsesores } from '../hooks/useData'
+import { useRankingAsesores, useLeadsContactados } from '../hooks/useData'
+import AdvisorAvatar from './AdvisorAvatar'
+
+const HUD_COLORS = ['#00ffd6', '#4fd1ff', '#8a5cff', '#ff2e7e', '#ffb800']
 
 const fmtMXN = n => new Intl.NumberFormat('es-MX', {
   style: 'currency', currency: 'MXN', maximumFractionDigits: 0,
@@ -34,7 +37,7 @@ function ShareBar({ pct, color = 'var(--gold)' }) {
     return () => clearTimeout(t)
   }, [pct])
   return (
-    <div style={{ height: 2, background: 'var(--b2)', overflow: 'hidden', marginTop: 8 }}>
+    <div className="team-share-bar" style={{ height: 2, background: 'var(--b2)', overflow: 'hidden', marginTop: 8 }}>
       <div ref={ref} style={{ height: '100%', width: 0, background: color, transition: 'width 1.1s cubic-bezier(0.16,1,0.3,1)' }} />
     </div>
   )
@@ -50,8 +53,8 @@ function GoalProgress({ sold, goal, color = 'var(--gold)' }) {
   const isComplete = safeSold >= safeGoal
 
   return (
-    <div style={{ marginTop: 14 }}>
-      <div style={{
+    <div className="team-goal" style={{ marginTop: 14 }}>
+      <div className="team-share" style={{
         display: 'flex',
         alignItems: 'baseline',
         justifyContent: 'space-between',
@@ -77,7 +80,7 @@ function GoalProgress({ sold, goal, color = 'var(--gold)' }) {
           {fmtCompact(safeSold)} / {fmtCompact(safeGoal)}
         </div>
       </div>
-      <div style={{
+      <div className="team-share-track" style={{
         height: 7,
         background: 'var(--b2)',
         border: '1px solid var(--b2)',
@@ -90,7 +93,7 @@ function GoalProgress({ sold, goal, color = 'var(--gold)' }) {
           transition: 'width 0.9s cubic-bezier(0.16,1,0.3,1)',
         }} />
       </div>
-      <div style={{
+      <div className="team-share-meta" style={{
         display: 'flex',
         justifyContent: 'space-between',
         gap: 10,
@@ -111,18 +114,31 @@ const SORT_OPTIONS = [
   { value: 'rank',   label: 'Posición' },
   { value: 'ventas', label: 'Ventas' },
   { value: 'deals',  label: 'Deals' },
+  { value: 'llamadas', label: 'Llamadas' },
 ]
 
 export default function VistaEquipo({ periodo }) {
   const { data, isLoading, isError, error } = useRankingAsesores(periodo)
+  const leadsQ = useLeadsContactados(periodo)
   const [sort, setSort]       = useState('rank')
   const [expanded, setExpanded] = useState(null)
 
   const { ranking = [], totalDeals } = data || {}
+  const callsByAdvisor = (leadsQ.data?.leads || []).reduce((acc, lead) => {
+    const key = lead.asesorId || lead.asesor || ''
+    acc[key] = (acc[key] || 0) + (Number(lead.totalLlamadas) || 0)
+    return acc
+  }, {})
+  const getAdvisorCalls = asesor =>
+    Number(asesor.totalLlamadas) ||
+    callsByAdvisor[asesor.ownerId] ||
+    callsByAdvisor[asesor.nombre] ||
+    0
   const totalVentas = ranking.reduce((s, a) => s + a.totalVentas, 0) || 1
 
   const sorted = [...ranking].sort((a, b) => {
     if (sort === 'deals')  return b.numeroDeals - a.numeroDeals
+    if (sort === 'llamadas') return getAdvisorCalls(b) - getAdvisorCalls(a)
     if (sort === 'ventas') return b.totalVentas - a.totalVentas
     return a.posicion - b.posicion
   })
@@ -140,7 +156,7 @@ export default function VistaEquipo({ periodo }) {
   )
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, animation: 'up 0.5s ease both' }}>
+    <div className="team-view" style={{ display: 'flex', flexDirection: 'column', gap: 20, animation: 'up 0.5s ease both' }}>
       {/* HEADER */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -180,12 +196,12 @@ export default function VistaEquipo({ periodo }) {
       </div>
 
       {/* GRID */}
-      <div style={{
+      <div className="team-grid" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-        gap: 1,
-        background: 'var(--b2)',
-        border: '1px solid var(--b2)',
+        gap: 10,
+        background: 'transparent',
+        border: 'none',
       }}>
         {sorted.map((a, i) => {
           const isTop = a.posicion === 1
@@ -194,13 +210,16 @@ export default function VistaEquipo({ periodo }) {
           const avg = Math.round(a.totalVentas / (a.numeroDeals || 1))
           const isOpen = expanded === a.ownerId
           const periodGoal = getPeriodGoal(a)
+          const accent = isWarn ? 'var(--red-w)' : HUD_COLORS[i % HUD_COLORS.length]
 
           return (
             <div
               key={a.ownerId}
+              className="team-card"
               onClick={() => setExpanded(isOpen ? null : a.ownerId)}
               style={{
                 background: isOpen ? 'var(--s3)' : isTop ? 'var(--s2)' : 'var(--s1)',
+                borderTop: `1px solid ${accent}55`,
                 padding: '20px 20px 16px',
                 cursor: 'pointer',
                 transition: 'background .15s',
@@ -214,20 +233,20 @@ export default function VistaEquipo({ periodo }) {
                   fontFamily: 'var(--serif)',
                   fontStyle: 'italic',
                   fontSize: 11,
-                  color: isTop ? 'var(--gold)' : isWarn ? 'var(--red-w)' : 'var(--muted)',
+                  color: accent,
                 }}>
                   {isWarn ? 'Sin vincular' : `${a.posicion}° lugar`}
                 </div>
-                <div style={{
-                  width: 36, height: 36,
-                  border: `1px solid ${isTop ? 'var(--gold)' : isWarn ? 'var(--red-w)' : 'var(--b3)'}`,
+                <AdvisorAvatar name={a.nombre} initials={initials(a.nombre)} className="team-avatar" style={{
+                  width: 56, height: 56,
+                  border: `1px solid ${accent}`,
+                  background: isWarn ? 'var(--red-wd)' : `${accent}12`,
+                  boxShadow: `0 0 10px ${accent}35`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontFamily: 'var(--sans)',
                   fontSize: 11, fontWeight: 'bold',
-                  color: isTop ? 'var(--gold)' : isWarn ? 'var(--red-w)' : 'var(--muted)',
-                }}>
-                  {initials(a.nombre)}
-                </div>
+                  color: accent,
+                }} />
               </div>
 
               {/* name */}
@@ -242,39 +261,36 @@ export default function VistaEquipo({ periodo }) {
                 {a.nombre}
               </div>
 
+              <div className="team-calls" style={{ color: accent }}>
+                <span className="team-calls-icon">⌕</span>
+                <span>{getAdvisorCalls(a)}</span>
+                <small>llamadas con clientes</small>
+              </div>
+
               {/* stats grid */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 1,
-                background: 'var(--b2)',
-                marginBottom: 0,
-              }}>
+              <div className="team-stats">
                 {[
                   { val: fmtCompact(a.totalVentas), lbl: 'Ventas' },
                   { val: a.numeroDeals,              lbl: 'Deals' },
                   { val: fmtMXN(avg),                lbl: 'Promedio' },
                   { val: `${sharePct.toFixed(1)}%`,  lbl: 'Share' },
                 ].map(s => (
-                  <div key={s.lbl} style={{
-                    background: 'var(--s1)',
-                    padding: '10px 12px',
-                  }}>
-                    <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 16, color: isTop ? 'var(--gold)' : 'var(--text)', lineHeight: 1, marginBottom: 3 }}>
+                  <div key={s.lbl} className="team-stat">
+                    <div className="team-stat-value" style={{ color: accent }}>
                       {s.val}
                     </div>
-                    <div style={{ fontFamily: 'var(--sans)', fontSize: 9, color: 'var(--muted)', letterSpacing: '0.08em' }}>
+                    <div className="team-stat-label">
                       {s.lbl}
                     </div>
                   </div>
                 ))}
               </div>
 
-              <ShareBar pct={sharePct} color={isTop ? 'var(--gold)' : isWarn ? 'var(--red-w)' : 'var(--warm1)'} />
+              <ShareBar pct={sharePct} color={accent} />
               <GoalProgress
                 sold={a.totalVentas}
                 goal={periodGoal}
-                color={isTop ? 'var(--gold)' : isWarn ? 'var(--red-w)' : 'var(--warm1)'}
+                color={accent}
               />
 
               {/* expanded deals */}

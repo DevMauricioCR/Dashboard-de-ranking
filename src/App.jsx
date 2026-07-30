@@ -197,7 +197,6 @@ export default function App() {
   const toggleTV = () => {
     setTvMode(on => {
       if (!on) {
-        setActiveNav(0)
         setViewKey(k => k + 1)
         document.documentElement.requestFullscreen?.().catch(() => {})
       } else {
@@ -205,6 +204,12 @@ export default function App() {
       }
       return !on
     })
+  }
+
+  const selectView = index => {
+    setActiveNav(index)
+    setShowAjustes(false)
+    setViewKey(key => key + 1)
   }
 
   // Exit TV on Escape
@@ -233,7 +238,7 @@ export default function App() {
   const isFetching = isRefreshingNow || ranking.isFetching || leads.isFetching
 
   return (
-    <div className="shell">
+    <div className={`shell${tvMode ? ' tv-mode' : ''}${activeNav === 3 ? ' view-report' : ''}`}>
       {/* SIDEBAR */}
       <aside className="sidebar">
         <div className="logo">D</div>
@@ -241,7 +246,7 @@ export default function App() {
           <div
             key={i}
             className={`nav-btn${activeNav === i ? ' active' : ''}`}
-            onClick={() => setActiveNav(i)}
+            onClick={() => selectView(i)}
           >
             {item.icon}
             <span className="tip">{item.tip}</span>
@@ -358,7 +363,7 @@ export default function App() {
         {tvMode && (
           <div className="tv-label">
             <div className="tv-label-dot" />
-            {VIEW_NAMES[TV_VIEWS.indexOf(activeNav)] || 'TV'} &nbsp;·&nbsp; rotando
+            {VIEW_NAMES[activeNav] || 'TV'} &nbsp;·&nbsp; rotando
           </div>
         )}
       </main>

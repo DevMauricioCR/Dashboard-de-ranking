@@ -107,6 +107,7 @@ export default function TablaLeads({ periodo }) {
             <div className="col-hdr">Cliente</div>
             <div className="col-hdr">Asesor</div>
             <div className="col-hdr">Deal</div>
+            <div className="col-hdr">Llamadas</div>
             <div className="col-hdr">Fecha</div>
             <div className="col-hdr">Estado</div>
           </div>
@@ -122,6 +123,7 @@ export default function TablaLeads({ periodo }) {
                 <div className="cname">{lead.nombre}</div>
                 <div className="casesor">{lead.asesor}</div>
                 <div className="cdeal">{lead.dealNombre}</div>
+                <div className="ccalls">{Number(lead.totalLlamadas) || 0}</div>
                 <div className="cdate">{fmtDate(lead.ultimaLlamada)}</div>
                 <div><span className={`badge ${cls}`}>{label}</span></div>
               </div>

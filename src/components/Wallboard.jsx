@@ -6,7 +6,7 @@ import {
 import { useDealsDataset } from '../hooks/useData'
 import styles from './Wallboard.module.css'
 
-const COLORS = ['#4f8ef7', '#34d399', '#e8b84b', '#7c5ce8', '#f87171', '#14b8a6', '#f97316', '#9ca3af']
+const COLORS = ['#00ffd6', '#4fd1ff', '#8a5cff', '#ff2e7e', '#ffb800', '#00a88f', '#bda7ff', '#ff6b9f']
 
 const PIPELINE_LABELS = {
   default: 'Proceso de Ventas',
@@ -252,8 +252,8 @@ export default function Wallboard() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={metrics.advisorData} layout="vertical" margin={{ top: 6, right: 18, bottom: 6, left: 12 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.06)" />
-              <XAxis type="number" tickFormatter={compactMoney} tick={{ fill: '#8a8fa8', fontSize: 11 }} />
-              <YAxis type="category" dataKey="asesor" width={118} tick={{ fill: '#f0f2f8', fontSize: 11 }} />
+              <XAxis type="number" tickFormatter={compactMoney} tick={{ fill: '#a3bdb8', fontSize: 11 }} />
+              <YAxis type="category" dataKey="asesor" width={118} tick={{ fill: '#e8fbf7', fontSize: 11 }} />
               <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="ventas" name="Ventas" radius={[0, 6, 6, 0]}>
                 {metrics.advisorData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -266,10 +266,10 @@ export default function Wallboard() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={metrics.productData} margin={{ top: 6, right: 12, bottom: 54, left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.06)" />
-              <XAxis dataKey="producto" angle={-35} textAnchor="end" interval={0} tick={{ fill: '#8a8fa8', fontSize: 10 }} />
-              <YAxis tickFormatter={compactMoney} tick={{ fill: '#8a8fa8', fontSize: 11 }} />
+              <XAxis dataKey="producto" angle={-35} textAnchor="end" interval={0} tick={{ fill: '#a3bdb8', fontSize: 10 }} />
+              <YAxis tickFormatter={compactMoney} tick={{ fill: '#a3bdb8', fontSize: 11 }} />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="ventas" name="Ventas" radius={[6, 6, 0, 0]} fill="#34d399" />
+              <Bar dataKey="ventas" name="Ventas" radius={[2, 2, 0, 0]} fill="#00ffd6" />
             </BarChart>
           </ResponsiveContainer>
         </Panel>
@@ -279,15 +279,16 @@ export default function Wallboard() {
             <AreaChart data={metrics.dayData} margin={{ top: 10, right: 20, bottom: 8, left: 0 }}>
               <defs>
                 <linearGradient id="salesArea" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4f8ef7" stopOpacity={0.55} />
-                  <stop offset="95%" stopColor="#4f8ef7" stopOpacity={0.02} />
+                  <stop offset="5%" stopColor="#00ffd6" stopOpacity={0.48} />
+                  <stop offset="55%" stopColor="#8a5cff" stopOpacity={0.18} />
+                  <stop offset="95%" stopColor="#ff2e7e" stopOpacity={0.02} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.06)" />
-              <XAxis dataKey="fecha" tick={{ fill: '#8a8fa8', fontSize: 10 }} />
-              <YAxis tickFormatter={compactMoney} tick={{ fill: '#8a8fa8', fontSize: 11 }} />
+              <XAxis dataKey="fecha" tick={{ fill: '#a3bdb8', fontSize: 10 }} />
+              <YAxis tickFormatter={compactMoney} tick={{ fill: '#a3bdb8', fontSize: 11 }} />
               <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="ventas" name="Ventas" stroke="#4f8ef7" fill="url(#salesArea)" strokeWidth={2} />
+              <Area type="monotone" dataKey="ventas" name="Ventas" stroke="#00ffd6" fill="url(#salesArea)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </Panel>
@@ -298,11 +299,11 @@ export default function Wallboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={metrics.monthData} margin={{ top: 10, right: 12, bottom: 8, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.06)" />
-                  <XAxis dataKey="mes" tick={{ fill: '#8a8fa8', fontSize: 10 }} />
-                  <YAxis tickFormatter={compactMoney} tick={{ fill: '#8a8fa8', fontSize: 11 }} />
+                  <XAxis dataKey="mes" tick={{ fill: '#a3bdb8', fontSize: 10 }} />
+                  <YAxis tickFormatter={compactMoney} tick={{ fill: '#a3bdb8', fontSize: 11 }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="ventas" name="Ventas" fill="#e8b84b" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="negocios" name="Negocios" fill="#4f8ef7" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="ventas" name="Ventas" fill="#00ffd6" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="negocios" name="Negocios" fill="#8a5cff" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
