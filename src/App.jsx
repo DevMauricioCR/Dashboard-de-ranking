@@ -185,7 +185,6 @@ export default function App() {
         const idx = TV_VIEWS.indexOf(prev)
         return TV_VIEWS[(idx + 1) % TV_VIEWS.length]
       })
-      setViewKey(k => k + 1)
     }, tvDuration)
 
     return () => {

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-  AreaChart, Area, CartesianGrid, PieChart, Pie,
+  AreaChart, Area, CartesianGrid,
 } from 'recharts'
 import { useRankingAsesores, useRankingProducto, useLeadsContactados } from '../hooks/useData'
 
@@ -149,6 +149,14 @@ export default function VistaReportes({ periodo, tvMode = false }) {
   const totalDeals  = ranking.reduce((s, a) => s + a.numeroDeals, 0)
   const totalLlamadas = ranking.reduce((s, a) => s + getAdvisorCalls(a), 0)
   const avgTicket   = totalDeals > 0 ? totalVentas / totalDeals : 0
+  const pipelineTotal = pipeline.reduce((sum, item) => sum + item.value, 0) || 1
+  const wonPct = ((pipeline.find(item => item.name === 'Ganados')?.value || 0) / pipelineTotal) * 100
+  const processPct = ((pipeline.find(item => item.name === 'En proceso')?.value || 0) / pipelineTotal) * 100
+  const pipelineGradient = `conic-gradient(
+    #00ffd6 0% ${wonPct}%,
+    #8a5cff ${wonPct}% ${wonPct + processPct}%,
+    #ff2e7e ${wonPct + processPct}% 100%
+  )`
 
   return (
     <div className="reports-view">
@@ -174,9 +182,9 @@ export default function VistaReportes({ periodo, tvMode = false }) {
             <BarChart data={asesorData} layout="vertical" margin={{ top: 4, right: 20, bottom: 4, left: tvMode ? 18 : 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" horizontal={false} />
               <XAxis type="number" tickFormatter={compactMoney} tick={{ fill: 'var(--muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="asesor" width={tvMode ? 138 : 118} interval={0} tick={{ fill: 'var(--text)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="asesor" width={tvMode ? 112 : 118} interval={0} tick={{ fill: 'var(--text)', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-              <Bar dataKey="ventas" name="Ventas" radius={[0, 3, 3, 0]} barSize={tvMode ? 22 : 14} isAnimationActive={!tvMode} animationDuration={1100} animationBegin={120}>
+              <Bar dataKey="ventas" name="Ventas" radius={[0, 3, 3, 0]} barSize={tvMode ? 28 : 14} isAnimationActive={!tvMode} animationDuration={1100} animationBegin={120}>
                 {asesorData.map((_, i) => (
                   <Cell key={i} fill={HUD_COLORS[i % HUD_COLORS.length]} />
                 ))}
@@ -190,9 +198,9 @@ export default function VistaReportes({ periodo, tvMode = false }) {
             <BarChart data={callsData} layout="vertical" margin={{ top: 4, right: 20, bottom: 4, left: tvMode ? 18 : 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" horizontal={false} />
               <XAxis type="number" allowDecimals={false} tick={{ fill: 'var(--muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="asesor" width={tvMode ? 138 : 118} interval={0} tick={{ fill: 'var(--text)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="asesor" width={tvMode ? 112 : 118} interval={0} tick={{ fill: 'var(--text)', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-              <Bar dataKey="llamadas" name="Llamadas" radius={[0, 3, 3, 0]} barSize={tvMode ? 22 : 14} isAnimationActive={!tvMode} animationDuration={1100} animationBegin={180}>
+              <Bar dataKey="llamadas" name="Llamadas" radius={[0, 3, 3, 0]} barSize={tvMode ? 28 : 14} isAnimationActive={!tvMode} animationDuration={1100} animationBegin={180}>
                 {callsData.map((_, i) => (
                   <Cell key={i} fill={HUD_COLORS[(i + 2) % HUD_COLORS.length]} />
                 ))}
@@ -241,28 +249,14 @@ export default function VistaReportes({ periodo, tvMode = false }) {
 
         <Panel title="Pipeline" meta={`${leads.length} total`}>
           <div className="pipeline-chart-content" style={{ padding: '0 16px' }}>
-            {/* pie chart */}
-            <ResponsiveContainer className="report-chart report-chart--pie" width="100%" height={tvMode ? '68%' : 130}>
-              <PieChart>
-                <Pie
-                  data={pipeline}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={tvMode ? 58 : 35}
-                  outerRadius={tvMode ? 88 : 55}
-                  paddingAngle={2}
-                  dataKey="value"
-                  isAnimationActive={!tvMode}
-                  animationDuration={1200}
-                  animationBegin={360}
-                >
-                  {pipeline.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} stroke="none" />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="pipeline-donut-wrap">
+              <div
+                className="pipeline-donut"
+                style={{ background: pipelineGradient }}
+                role="img"
+                aria-label={`Pipeline: ${pipeline.map(item => `${item.name} ${item.value}`).join(', ')}`}
+              />
+            </div>
 
             {/* legend */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
