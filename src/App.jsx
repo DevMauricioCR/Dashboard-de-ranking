@@ -328,7 +328,7 @@ export default function App() {
         {/* Views — key fuerza re-mount y activa animación slideIn */}
         {!showAjustes && <div key={viewKey} className="view-enter">
 
-          {activeNav === 1 && <VistaEquipo periodo={periodo} />}
+          {activeNav === 1 && <VistaEquipo periodo={periodo} tvMode={tvMode} />}
           {activeNav === 2 && <VistaDeals periodo={periodo} />}
           {activeNav === 3 && <VistaReportes periodo={periodo} tvMode={tvMode} />}
 

@@ -1283,9 +1283,10 @@ body, body * {
 .tv-mode .left-col, .tv-mode .right-col { gap: 12px; }
 .tv-mode .team-grid {
   flex: 1;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
   grid-auto-rows: minmax(0, 1fr);
-  gap: 7px !important;
+  gap: 10px !important;
 }
 .tv-mode .view-enter {
   display: flex;

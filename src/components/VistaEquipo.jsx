@@ -117,7 +117,7 @@ const SORT_OPTIONS = [
   { value: 'llamadas', label: 'Llamadas' },
 ]
 
-export default function VistaEquipo({ periodo }) {
+export default function VistaEquipo({ periodo, tvMode = false }) {
   const { data, isLoading, isError, error } = useRankingAsesores(periodo)
   const leadsQ = useLeadsContactados(periodo)
   const [sort, setSort]       = useState('rank')
@@ -142,6 +142,9 @@ export default function VistaEquipo({ periodo }) {
     if (sort === 'ventas') return b.totalVentas - a.totalVentas
     return a.posicion - b.posicion
   })
+  const visibleAdvisors = tvMode
+    ? [...ranking].sort((a, b) => a.posicion - b.posicion).slice(0, 12)
+    : sorted
 
   if (isLoading) return (
     <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--muted)', fontSize: 12 }}>
@@ -167,10 +170,10 @@ export default function VistaEquipo({ periodo }) {
             Equipo
           </div>
           <div style={{ fontSize: 20, fontWeight: 'bold', letterSpacing: '-0.03em', color: 'var(--text)' }}>
-            {ranking.length} asesores &nbsp;·&nbsp; {totalDeals || 0} deals
+            {tvMode ? `Top ${visibleAdvisors.length}` : `${ranking.length} asesores`} &nbsp;·&nbsp; {totalDeals || 0} deals
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 1, border: '1px solid var(--b2)' }}>
+        {!tvMode && <div style={{ display: 'flex', gap: 1, border: '1px solid var(--b2)' }}>
           {SORT_OPTIONS.map(o => (
             <div
               key={o.value}
@@ -192,7 +195,7 @@ export default function VistaEquipo({ periodo }) {
               {o.label}
             </div>
           ))}
-        </div>
+        </div>}
       </div>
 
       {/* GRID */}
@@ -203,7 +206,7 @@ export default function VistaEquipo({ periodo }) {
         background: 'transparent',
         border: 'none',
       }}>
-        {sorted.map((a, i) => {
+        {visibleAdvisors.map((a, i) => {
           const isTop = a.posicion === 1
           const isWarn = a.nombre === 'Sin asesor asignado'
           const sharePct = (a.totalVentas / totalVentas) * 100
@@ -216,7 +219,7 @@ export default function VistaEquipo({ periodo }) {
             <div
               key={a.ownerId}
               className="team-card"
-              onClick={() => setExpanded(isOpen ? null : a.ownerId)}
+              onClick={() => !tvMode && setExpanded(isOpen ? null : a.ownerId)}
               style={{
                 background: isOpen ? 'var(--s3)' : isTop ? 'var(--s2)' : 'var(--s1)',
                 borderTop: `1px solid ${accent}55`,
@@ -287,14 +290,14 @@ export default function VistaEquipo({ periodo }) {
               </div>
 
               <ShareBar pct={sharePct} color={accent} />
-              <GoalProgress
+              {!tvMode && <GoalProgress
                 sold={a.totalVentas}
                 goal={periodGoal}
                 color={accent}
-              />
+              />}
 
               {/* expanded deals */}
-              {isOpen && a.deals?.length > 0 && (
+              {!tvMode && isOpen && a.deals?.length > 0 && (
                 <div style={{
                   marginTop: 12,
                   borderTop: '1px solid var(--b2)',
