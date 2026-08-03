@@ -13,6 +13,20 @@ const REFRESH_INTERVAL = Number(env.VITE_REFRESH_INTERVAL || 60_000);
 const META_ASESOR_JR = 200_000;
 const META_ASESOR_SR = 500_000;
 
+const ADVISOR_ROSTER = [
+  { nombre: 'Yuliana Rivera Fararoni', cargo: 'Asesor Sr' },
+  { nombre: 'Mónica Velázquez', cargo: 'Asesor Sr' },
+  { nombre: 'Jesús Maltos', cargo: 'Asesor Sr' },
+  { nombre: 'Daniela Mendieta', cargo: 'Asesor Sr' },
+  { nombre: 'Omar Díaz', cargo: 'Asesor Sr' },
+  { nombre: 'Megan Flores', cargo: 'Asesor Sr' },
+  { nombre: 'Andrea Valdez', cargo: 'Asesor Sr' },
+  { nombre: 'Jose Francisco Zepeda Gallegos', cargo: 'Asesor Jr' },
+  { nombre: 'Gabriel Eduardo Sotelo Fonseca', cargo: 'Asesor Jr' },
+  { nombre: 'Andrea Paredes', cargo: 'Asesor Sr' },
+  { nombre: 'Karina Díaz', cargo: 'Asesor Sr' },
+];
+
 export const isMockMode = false;
 
 type HubspotOwner = {
@@ -119,6 +133,89 @@ function fullName(first?: string | null, last?: string | null) {
   return [first, last].filter(Boolean).join(' ').trim();
 }
 
+function normalizeName(value?: string | null) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function getAdvisorRoster(data: any) {
+  const payloadOwners = Array.isArray(data?.owners) ? data.owners : [];
+  const byName = new Map<string, any>();
+
+  ADVISOR_ROSTER.forEach((advisor, index) => {
+    byName.set(normalizeName(advisor.nombre), {
+      ownerId: `advisor-${index + 1}`,
+      ...advisor,
+      rosterIndex: index,
+    });
+  });
+
+  payloadOwners.forEach((owner: any) => {
+    const nombre = owner.nombre || owner.name || fullName(owner.firstName, owner.lastName);
+    const key = normalizeName(nombre);
+    if (!key) return;
+
+    const cargo = owner.cargo || owner.jobTitle || '';
+    const known = byName.get(key);
+    const isAdvisor = normalizeName(cargo).includes('asesor') || Boolean(known);
+    if (!isAdvisor) return;
+
+    byName.set(key, {
+      ownerId: String(owner.ownerId || owner.id || owner.userId || known?.ownerId || key),
+      nombre,
+      cargo: cargo || known?.cargo || '',
+      rosterIndex: known?.rosterIndex ?? byName.size,
+    });
+  });
+
+  return Array.from(byName.values()).sort((a, b) => a.rosterIndex - b.rosterIndex);
+}
+
+function mergeRankingWithRoster(ranking: any[], data: any, periodo: string) {
+  const rowsByName = new Map(
+    ranking.map((row) => [normalizeName(row.nombre || row.asesor), row])
+  );
+
+  const merged = getAdvisorRoster(data).map((advisor) => {
+    const row = rowsByName.get(normalizeName(advisor.nombre));
+    if (row) {
+      rowsByName.delete(normalizeName(advisor.nombre));
+      return { ...advisor, ...row, cargo: row.cargo || advisor.cargo };
+    }
+
+    return {
+      ...advisor,
+      totalVentas: 0,
+      monto: 0,
+      numeroDeals: 0,
+      totalLlamadas: 0,
+      deals: [],
+    };
+  });
+
+  merged.push(...rowsByName.values());
+
+  return merged
+    .sort((a, b) =>
+      toNumber(b.totalVentas) - toNumber(a.totalVentas) ||
+      toNumber(b.numeroDeals) - toNumber(a.numeroDeals) ||
+      toNumber(a.rosterIndex) - toNumber(b.rosterIndex)
+    )
+    .map((row, index) => withMeta({
+      ...row,
+      posicion: index + 1,
+      totalVentas: toNumber(row.totalVentas ?? row.monto),
+      monto: toNumber(row.monto ?? row.totalVentas),
+      numeroDeals: toNumber(row.numeroDeals ?? row.deals),
+      totalLlamadas: getCallCount(row),
+      deals: Array.isArray(row.deals) ? row.deals : [],
+    }, periodo));
+}
+
 function getMetaMensual(cargo?: string | null) {
   const normalized = String(cargo || '')
     .normalize('NFD')
@@ -156,29 +253,35 @@ function parseDate(value?: string | null) {
 }
 
 function getPeriodRange(periodo: string) {
-  const now = new Date();
-  const end = new Date(now);
-  end.setHours(23, 59, 59, 999);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Mexico_City',
+    year: 'numeric', month: 'numeric', day: 'numeric',
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, Number(value)]));
+  const year = values.year;
+  const monthIndex = values.month - 1;
+  const day = values.day;
+  const mexicoStart = (y: number, m: number, d: number) => new Date(Date.UTC(y, m, d, 6, 0, 0, 0));
+  const mexicoEnd = (y: number, m: number, d: number) => new Date(Date.UTC(y, m, d + 1, 5, 59, 59, 999));
 
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
+  let start = mexicoStart(year, monthIndex, day);
+  let end = mexicoEnd(year, monthIndex, day);
 
   if (periodo === 'diario') return { start, end };
 
   if (periodo === 'mes_pasado' || periodo === 'mes_anterior') {
-    start.setMonth(now.getMonth() - 1, 1);
-    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-    previousMonthEnd.setHours(23, 59, 59, 999);
-    return { start, end: previousMonthEnd };
-  }
-
-  if (periodo === 'trimestral') {
-    const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
-    start.setMonth(quarterStartMonth, 1);
+    start = mexicoStart(year, monthIndex - 1, 1);
+    end = new Date(mexicoStart(year, monthIndex, 1).getTime() - 1);
     return { start, end };
   }
 
-  start.setDate(1);
+  if (periodo === 'trimestral') {
+    const quarterStartMonth = Math.floor(monthIndex / 3) * 3;
+    start = mexicoStart(year, quarterStartMonth, 1);
+    return { start, end };
+  }
+
+  start = mexicoStart(year, monthIndex, 1);
   return { start, end };
 }
 
@@ -286,26 +389,39 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
     retry: 2,
     select: (data) => {
       if (Array.isArray(data?.ranking)) {
+        const normalizedRanking = data.ranking.map((row: any, index: number) => withMeta({
+          ...row,
+          ownerId: row.ownerId || row.id || String(index + 1),
+          nombre: row.nombre || row.asesor || 'Sin asesor asignado',
+          cargo: row.cargo || row.jobTitle || '',
+          totalVentas: toNumber(row.totalVentas ?? row.monto),
+          monto: toNumber(row.monto ?? row.totalVentas),
+          numeroDeals: toNumber(row.numeroDeals ?? row.deals),
+          totalLlamadas: getCallCount(row),
+          deals: Array.isArray(row.deals) ? row.deals : [],
+          posicion: row.posicion || row.rank || index + 1,
+        }, periodo));
         return {
           ...data,
-          ranking: data.ranking.map((row: any, index: number) => withMeta({
-            ...row,
-            ownerId: row.ownerId || row.id || String(index + 1),
-            nombre: row.nombre || row.asesor || 'Sin asesor asignado',
-            cargo: row.cargo || row.jobTitle || '',
-            totalVentas: toNumber(row.totalVentas ?? row.monto),
-            monto: toNumber(row.monto ?? row.totalVentas),
-            numeroDeals: toNumber(row.numeroDeals ?? row.deals),
-            totalLlamadas: getCallCount(row),
-            deals: Array.isArray(row.deals) ? row.deals : [],
-            posicion: row.posicion || row.rank || index + 1,
-          }, periodo)),
+          ranking: mergeRankingWithRoster(normalizedRanking, data, periodo),
         };
       }
 
       const deals = filterDealsByPeriod(toArrayPayload(data), periodo).filter(isClosedWon);
       const calls = toCallsPayload(data);
       const grouped = new Map<string, any>();
+
+      for (const advisor of getAdvisorRoster(data)) {
+        grouped.set(String(advisor.ownerId), {
+          ...advisor,
+          totalVentas: 0,
+          monto: 0,
+          numeroDeals: 0,
+          deals: 0,
+          dealsDetalle: [],
+          totalLlamadas: 0,
+        });
+      }
 
       for (const deal of deals) {
         const ownerId = String(deal.owner?.id || deal.owner?.userId || 'sin-owner');
@@ -314,8 +430,13 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
           deal.owner?.email ||
           'Sin asesor asignado';
 
-        if (!grouped.has(ownerId)) {
-          grouped.set(ownerId, {
+        const rosterMatch = Array.from(grouped.values()).find(
+          (row) => normalizeName(row.nombre) === normalizeName(nombre)
+        );
+        const groupKey = rosterMatch ? String(rosterMatch.ownerId) : ownerId;
+
+        if (!grouped.has(groupKey)) {
+          grouped.set(groupKey, {
             ownerId,
             nombre,
             cargo: deal.owner?.jobTitle || deal.owner?.cargo || '',
@@ -328,7 +449,7 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
           });
         }
 
-        const row = grouped.get(ownerId);
+        const row = grouped.get(groupKey);
         const monto = toNumber(deal.amount);
         row.totalVentas += monto;
         row.monto += monto;
@@ -350,7 +471,7 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
       }
 
       const ranking = Array.from(grouped.values())
-        .sort((a, b) => b.totalVentas - a.totalVentas)
+        .sort((a, b) => b.totalVentas - a.totalVentas || b.numeroDeals - a.numeroDeals || toNumber(a.rosterIndex) - toNumber(b.rosterIndex))
         .map((row, index) => withMeta({
           ...row,
           posicion: index + 1,

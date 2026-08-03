@@ -11,7 +11,9 @@ if (!token) {
 const query = $('Webhook1').first().json.query || {};
 const periodo = query.periodo || 'mensual';
 const staticData = $getWorkflowStaticData('global');
-const cacheKey = `dashboard:${periodo}`;
+// Evita reutilizar datasets guardados por constructores antiguos sin llamadas.
+const DATASET_SCHEMA_VERSION = 'v3-calls-owners';
+const cacheKey = `dashboard:${DATASET_SCHEMA_VERSION}:${periodo}`;
 const cacheTtlMs = Number(query.cacheTtlMs || 120000);
 const cached = staticData[cacheKey];
 
@@ -35,29 +37,38 @@ if (
 }
 
 function getPeriodRange(value) {
-  const now = new Date();
-  const end = new Date(now);
-  end.setHours(23, 59, 59, 999);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Mexico_City',
+    year: 'numeric', month: 'numeric', day: 'numeric'
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(
+    parts.map(({ type, value: partValue }) => [type, Number(partValue)])
+  );
+  const year = values.year;
+  const monthIndex = values.month - 1;
+  const day = values.day;
+  // Ciudad de México permanece en UTC-6; se construyen límites exactos en UTC.
+  const mexicoStart = (y, m, d) => new Date(Date.UTC(y, m, d, 6, 0, 0, 0));
+  const mexicoEnd = (y, m, d) => new Date(Date.UTC(y, m, d + 1, 5, 59, 59, 999));
 
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
+  let start = mexicoStart(year, monthIndex, day);
+  let end = mexicoEnd(year, monthIndex, day);
 
   if (value === 'diario') return { start, end };
 
   if (value === 'mes_pasado' || value === 'mes_anterior') {
-    start.setMonth(now.getMonth() - 1, 1);
-    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-    previousMonthEnd.setHours(23, 59, 59, 999);
-    return { start, end: previousMonthEnd };
-  }
-
-  if (value === 'trimestral') {
-    const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
-    start.setMonth(quarterStartMonth, 1);
+    start = mexicoStart(year, monthIndex - 1, 1);
+    end = new Date(mexicoStart(year, monthIndex, 1).getTime() - 1);
     return { start, end };
   }
 
-  start.setDate(1);
+  if (value === 'trimestral') {
+    const quarterStartMonth = Math.floor(monthIndex / 3) * 3;
+    start = mexicoStart(year, quarterStartMonth, 1);
+    return { start, end };
+  }
+
+  start = mexicoStart(year, monthIndex, 1);
   return { start, end };
 }
 
@@ -520,6 +531,34 @@ const result = deals.map(deal => {
   };
 });
 
+// Catálogo independiente del periodo: permite mostrar asesores con métricas en cero.
+const uniqueOwners = new Map();
+for (const owner of ownerMap.values()) {
+  if (!owner?.id || owner.archived) continue;
+  uniqueOwners.set(String(owner.id), owner);
+}
+
+const normalizedOwners = [...uniqueOwners.values()].map(owner => {
+  const ownerUser =
+    userMap.get(String(owner.email || '').toLowerCase()) ||
+    userMap.get(String(owner.userId || '')) ||
+    userMap.get(String(owner.id || '')) ||
+    null;
+  const userProps = ownerUser?.properties || {};
+
+  return {
+    ownerId: String(owner.id),
+    id: String(owner.id),
+    userId: owner.userId ? String(owner.userId) : null,
+    firstName: owner.firstName || null,
+    lastName: owner.lastName || null,
+    nombre: [owner.firstName, owner.lastName].filter(Boolean).join(' ').trim(),
+    email: owner.email || null,
+    jobTitle: userProps.hs_job_title || null,
+    cargo: userProps.hs_job_title || null
+  };
+});
+
 const payload = {
   periodo,
   desdeISO: start.toISOString(),
@@ -529,7 +568,8 @@ const payload = {
   totalCalls: normalizedCalls.length,
   elapsedMs: Date.now() - startedAt,
   deals: result,
-  calls: normalizedCalls
+  calls: normalizedCalls,
+  owners: normalizedOwners
 };
 
 staticData[cacheKey] = {
