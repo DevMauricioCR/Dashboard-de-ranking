@@ -1216,6 +1216,20 @@ body, body * {
   flex: 1 1 auto;
   min-height: 0;
 }
+.tv-mode.view-pantalla .topbar,
+.tv-mode.view-pantalla .tv-label {
+  display: none;
+}
+.tv-mode.view-pantalla .main {
+  padding: 14px 20px 18px;
+}
+.tv-mode.view-pantalla .view-enter {
+  height: 100%;
+  animation: none !important;
+}
+.tv-mode.view-pantalla .pantalla-tv {
+  height: 100%;
+}
 .tv-mode.view-report .pipeline-chart-content {
   flex: 1;
   min-height: 0;
@@ -1474,6 +1488,19 @@ body, body * {
     animation: none !important;
   }
 }
+
+/* ---- PANTALLAS DE TV (kiosco standalone, ?view=pantalla-*) ---- */
+.pantalla-kiosk {
+  min-height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  padding: 26px 34px 30px;
+  display: flex;
+  flex-direction: column;
+}
+.pantalla-kiosk .pantalla-tv { height: 100%; }
+.pantalla-kiosk .panel-title { font-size: 15px; }
+.pantalla-kiosk .panel-meta { font-size: 12px; }
 
 /* ---- LOADING / ERROR / EMPTY ---- */
 .state-box {

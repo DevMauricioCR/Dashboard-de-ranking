@@ -54,37 +54,7 @@ function Toggle({ value, onChange }) {
   )
 }
 
-function Slider({ value, min, max, step, onChange, fmt }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <input
-        type="range"
-        min={min} max={max} step={step}
-        value={value}
-        onChange={e => onChange(Number(e.target.value))}
-        style={{
-          width: 120,
-          accentColor: 'var(--gold)',
-          cursor: 'pointer',
-        }}
-      />
-      <div style={{
-        fontFamily: 'var(--serif)',
-        fontStyle: 'italic',
-        fontSize: 14,
-        color: 'var(--gold)',
-        minWidth: 40,
-        textAlign: 'right',
-      }}>
-        {fmt ? fmt(value) : value}
-      </div>
-    </div>
-  )
-}
-
 export default function VistaAjustes({
-  tvDuration, onTvDuration,
-  defaultPeriodo, onDefaultPeriodo,
   tvMode, onToggleTV,
   refreshInterval, onRefreshInterval,
 }) {
@@ -100,13 +70,6 @@ export default function VistaAjustes({
     onRefreshInterval(v * 1000)
   }
 
-  const PERIODOS = [
-    { value: 'diario',     label: 'Hoy' },
-    { value: 'mensual',    label: 'Este mes' },
-    { value: 'mes_pasado', label: 'Mes pasado' },
-    { value: 'trimestral', label: 'Trimestre' },
-  ]
-
   return (
     <div style={{ maxWidth: 600, animation: 'up 0.5s ease both' }}>
       <div style={{ paddingBottom: 16, borderBottom: '1px solid var(--b2)', marginBottom: 20 }}>
@@ -121,51 +84,27 @@ export default function VistaAjustes({
       {/* MODO TV */}
       <Section title="Modo TV">
         <Row
-          label="Activar rotación automática"
-          sub="Cicla entre las 4 vistas en pantalla completa"
+          label="Pantalla completa"
+          sub="Oculta la barra lateral y agranda la vista actual para proyectar"
         >
           <Toggle value={tvMode} onChange={onToggleTV} />
         </Row>
         <Row
-          label="Duración por vista"
-          sub={`Cada vista se muestra ${tvDuration / 1000}s antes de cambiar`}
+          label="Rotación automática"
+          sub="Con Pantalla completa activo, cambia de pantalla cada 30s: Día → Mes → Año → Podio → Eventos"
         >
-          <Slider
-            value={tvDuration / 1000}
-            min={8} max={60} step={2}
-            onChange={v => onTvDuration(v * 1000)}
-            fmt={v => `${v}s`}
-          />
+          <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 12, color: 'var(--dim)' }}>
+            {tvMode ? 'activa' : 'se activa con TV'}
+          </div>
         </Row>
+        <Row
+          label="5 pantallas sueltas para TV"
+          sub="Cada TV también puede abrir su propia URL fija (sin rotación): ?view=pantalla-dia, ?view=pantalla-mes, ?view=pantalla-anio, ?view=pantalla-podio, ?view=pantalla-eventos"
+        />
       </Section>
 
       {/* GENERAL */}
       <Section title="General">
-        <Row label="Periodo por defecto" sub="Vista que se carga al abrir el dashboard">
-          <div style={{ display: 'flex', border: '1px solid var(--b2)' }}>
-            {PERIODOS.map(p => (
-              <div
-                key={p.value}
-                onClick={() => onDefaultPeriodo(p.value)}
-                style={{
-                  padding: '4px 12px',
-                  fontFamily: 'var(--sans)',
-                  fontSize: 9,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  cursor: 'pointer',
-                  background: defaultPeriodo === p.value ? 'var(--gold)' : 'transparent',
-                  color: defaultPeriodo === p.value ? '#00110d' : 'var(--muted)',
-                  fontWeight: defaultPeriodo === p.value ? 'bold' : 'normal',
-                  borderRight: '1px solid var(--b2)',
-                  transition: 'all .15s',
-                }}
-              >
-                {p.label}
-              </div>
-            ))}
-          </div>
-        </Row>
         <Row
           label="Intervalo de actualización"
           sub="Cada cuántos segundos se consultan datos nuevos (mín. 10s)"
