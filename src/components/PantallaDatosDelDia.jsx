@@ -163,30 +163,30 @@ export default function PantallaDatosDelDia({ tvMode = false }) {
       <style>{CSS}</style>
       <div className="pdd-card pdd-kpi">
         <div>
-          <div className="pdd-kpi-label">// Ventas Totales · hoy</div>
+          <div className="pdd-kpi-label">// Ventas hoy</div>
           <div className="pdd-kpi-value">{fmtMXN(ventasTotalesDia)}</div>
         </div>
         {embudo && (
           <div>
-            <div className="pdd-kpi-label">// Cantidad total de negocio</div>
+            <div className="pdd-kpi-label">// Negocio total</div>
             <div className="pdd-kpi-value">{fmtMXN(embudo.cantidadTotal)}</div>
           </div>
         )}
         {embudo && (
           <div>
-            <div className="pdd-kpi-label">// Cantidad ponderada de negocio</div>
+            <div className="pdd-kpi-label">// Negocio ponderado</div>
             <div className="pdd-kpi-value">{fmtMXN(embudo.cantidadPonderada)}</div>
           </div>
         )}
         {embudo && (
           <div>
-            <div className="pdd-kpi-label">// Cantidad de negocio abierto</div>
+            <div className="pdd-kpi-label">// Negocio abierto</div>
             <div className="pdd-kpi-value">{fmtMXN(embudo.cantidadAbierta)}</div>
           </div>
         )}
         {embudo && (
           <div>
-            <div className="pdd-kpi-label">// Cantidad de nuevo negocio</div>
+            <div className="pdd-kpi-label">// Negocio nuevo</div>
             <div className="pdd-kpi-value">{fmtMXN(embudo.cantidadNuevoNegocio)}</div>
           </div>
         )}

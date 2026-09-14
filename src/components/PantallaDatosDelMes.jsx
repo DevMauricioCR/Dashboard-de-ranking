@@ -192,36 +192,36 @@ export default function PantallaDatosDelMes({ tvMode = false }) {
       <style>{CSS}</style>
       <div className="pdm-card pdm-kpi">
         <div>
-          <div className="pdm-kpi-label">// Total Vendido · negocio cerrado</div>
+          <div className="pdm-kpi-label">// Negocio cerrado</div>
           <div className="pdm-kpi-value">{fmtMXN(totalVendidoMes)}</div>
         </div>
         {embudo && (
           <div>
-            <div className="pdm-kpi-label">// Cantidad total de negocio</div>
+            <div className="pdm-kpi-label">// Negocio total</div>
             <div className="pdm-kpi-value">{fmtMXN(embudo.cantidadTotal)}</div>
           </div>
         )}
         {embudo && (
           <div>
-            <div className="pdm-kpi-label">// Cantidad ponderada de negocio</div>
+            <div className="pdm-kpi-label">// Negocio ponderado</div>
             <div className="pdm-kpi-value">{fmtMXN(embudo.cantidadPonderada)}</div>
           </div>
         )}
         {embudo && (
           <div>
-            <div className="pdm-kpi-label">// Cantidad de negocio abierto</div>
+            <div className="pdm-kpi-label">// Negocio abierto</div>
             <div className="pdm-kpi-value">{fmtMXN(embudo.cantidadAbierta)}</div>
           </div>
         )}
         {embudo && (
           <div>
-            <div className="pdm-kpi-label">// Cantidad de nuevo negocio</div>
+            <div className="pdm-kpi-label">// Negocio nuevo</div>
             <div className="pdm-kpi-value">{fmtMXN(embudo.cantidadNuevoNegocio)}</div>
           </div>
         )}
         {ventasWeb && (
           <div>
-            <div className="pdm-kpi-label">// Ventas Web · mes en curso</div>
+            <div className="pdm-kpi-label">// Ventas web</div>
             <div className="pdm-kpi-value">{fmtMXN(ventasWeb.totalMesActual)}</div>
           </div>
         )}
