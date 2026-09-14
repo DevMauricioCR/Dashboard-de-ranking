@@ -1,4 +1,5 @@
 import { useVentasAnualesSheet } from '../hooks/useData'
+import useRowFit from '../hooks/useRowFit'
 import AdvisorAvatar from './AdvisorAvatar'
 
 // Paleta y layout exactos del diseño (ventas_por_ano.html)
@@ -35,34 +36,42 @@ function colorVars(hex) {
 }
 
 const CSS = `
+.pva-screen{ height:100%; overflow:auto; display:flex; flex-direction:column; gap:8px; }
 .pva-card{ background:var(--s1); border:1px solid rgba(255,255,255,0.06); padding:18px; position:relative; }
 .pva-card::before, .pva-card::after{ content:''; position:absolute; width:14px; height:14px; pointer-events:none; }
 .pva-card::before{ top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); }
 .pva-card::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); }
-.pva-kpi{ padding:12px 22px; margin-bottom:8px; background:linear-gradient(135deg, rgba(0,255,214,0.08), rgba(255,46,126,0.04)); border-color:rgba(0,255,214,0.3); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+.pva-table-card{ display:flex; flex-direction:column; }
+.pva-table-card.pva-fit{ flex:1; min-height:0; }
+.pva-kpi{ padding:12px 22px; margin-bottom:8px; background:linear-gradient(135deg, rgba(0,255,214,0.08), rgba(255,46,126,0.04)); border-color:rgba(0,255,214,0.3); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; flex-shrink:0; }
 .pva-kpi-label{ font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.09em; font-weight:700; }
 .pva-kpi-value{ font-weight:700; font-size:24px; letter-spacing:-0.01em; color:var(--cyan); text-shadow:0 0 18px rgba(0,255,214,0.35); margin-top:4px; }
-.pva-card-title{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.pva-card-title{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); flex-shrink:0; }
 .pva-card-title h2{ font-size:16px; font-weight:700; color:var(--text); }
 .pva-card-title h2::before{ content:'▸ '; color:var(--cyan); }
 .pva-card-title span{ font-size:11.5px; color:var(--muted); font-weight:600; letter-spacing:0.03em; }
-.pva-col-heads{ display:grid; grid-template-columns:1fr 190px; gap:14px; padding:0 16px 4px 16px; font-size:11px; font-weight:700; letter-spacing:0.06em; color:var(--muted); text-transform:uppercase; }
+.pva-col-heads{ display:grid; grid-template-columns:1fr 190px; gap:14px; padding:0 16px 4px 16px; font-size:11px; font-weight:700; letter-spacing:0.06em; color:var(--muted); text-transform:uppercase; flex-shrink:0; }
 .pva-col-heads .r{ text-align:right; }
-.pva-rows{ display:flex; flex-direction:column; gap:4px; }
-.pva-row{ display:grid; grid-template-columns:1fr 190px; align-items:center; gap:14px; background:var(--s2); border:1px solid rgba(255,255,255,0.06); border-left:3px solid var(--c); border-radius:8px; padding:5px 14px; transition:transform .18s ease, box-shadow .18s ease; }
+.pva-rows{ display:flex; flex-direction:column; gap:calc(4px * var(--row-scale, 1)); }
+.pva-rows.pva-fit{ flex:1; min-height:0; overflow:hidden; }
+.pva-row{ display:grid; grid-template-columns:1fr 190px; align-items:center; gap:14px; background:var(--s2); border:1px solid rgba(255,255,255,0.06); border-left:3px solid var(--c); border-radius:8px; padding:calc(5px * var(--row-scale, 1)) 14px; overflow:hidden; transition:transform .18s ease, box-shadow .18s ease; }
+.pva-rows.pva-fit .pva-row{ flex:1 1 0; min-height:0; }
 .pva-row:hover{ transform:translateY(-2px); box-shadow:0 8px 22px -8px var(--c-glow); }
 .pva-asesor-cell{ display:flex; align-items:center; gap:12px; min-width:0; }
 .pva-avatar{ border-radius:50%; flex-shrink:0; border:1.5px solid var(--c); box-shadow:0 0 8px var(--c-glow); background:#0d1416; }
-.pva-asesor-name{ font-weight:700; font-size:14.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pva-asesor-name{ font-weight:700; font-size:calc(14.5px * var(--row-scale, 1)); color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pva-metric-ventas{ display:flex; flex-direction:column; gap:3px; }
-.pva-year-val{ text-align:right; font-weight:700; font-size:13px; color:var(--c); }
+.pva-year-val{ text-align:right; font-weight:700; font-size:calc(13px * var(--row-scale, 1)); color:var(--c); }
 .pva-mini-track{ height:4px; width:100%; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
 .pva-mini-fill{ height:100%; border-radius:3px; background:var(--c); box-shadow:0 0 6px var(--c-glow); transform-origin:right; transition:width .8s cubic-bezier(0.16,1,0.3,1); }
 .pva-mini-fill.hit{ background:var(--amber); box-shadow:0 0 8px rgba(255,184,0,0.6); }
-.pva-meta-label{ font-size:10.5px; text-align:right; color:var(--dim); }
+.pva-meta-label{ font-size:calc(10.5px * var(--row-scale, 1)); text-align:right; color:var(--dim); }
 .pva-meta-label.hit{ color:var(--amber); font-weight:700; }
 @media (max-width:820px){
+  .pva-table-card.pva-fit{ flex:none; }
   .pva-col-heads{ display:none; }
+  .pva-rows.pva-fit{ flex:none; overflow:visible; }
+  .pva-rows.pva-fit .pva-row{ flex:none; }
   .pva-row{ grid-template-columns:1fr auto; }
   .pva-kpi{ flex-direction:column; align-items:flex-start; }
 }
@@ -76,20 +85,22 @@ export default function PantallaVentasPorAno({ tvMode = false }) {
   const anioQ = useVentasAnualesSheet()
   const ranking = anioQ.data?.ranking || []
 
+  // En TV (kiosco sin scroll) las filas se encogen o agrandan automáticamente
+  // según cuántos asesores haya y el alto disponible, para que siempre quepan
+  // todas sin cortarse -- ver useRowFit.
+  const rowCountForFit = ranking.filter(a => a.nombre !== 'Sin asesor asignado').length
+  const { containerRef: rowsRef, scale: rowScale } = useRowFit(rowCountForFit, tvMode)
+
   if (anioQ.isLoading) return <div className="state-box" style={{ paddingTop: 60 }}>Cargando pantalla…</div>
   if (anioQ.isError) return <div className="state-box" style={{ paddingTop: 60, color: 'var(--red-w)' }}>Error: {anioQ.error?.message}</div>
 
   const visible = ranking.filter(a => a.nombre !== 'Sin asesor asignado')
   const totalGeneral = visible.reduce((s, a) => s + (a.totalVentas || 0), 0)
-  // En TV el kiosco no puede hacer scroll (pantalla-kiosk usa overflow:hidden):
-  // agrandar el avatar/texto en ese modo hacía que la tabla se pasara del alto
-  // de pantalla y varios asesores quedaran invisibles (mismo problema que ya
-  // se corrigió en Datos del Día/Mes).
-  const avatarSize = 36
+  const avatarSize = tvMode ? Math.round(36 * rowScale) : 36
   const asesoresActivos = visible.filter(a => a.ownerId !== 'otros-asesores').length
 
   return (
-    <div style={{ height: '100%', overflow: 'auto' }}>
+    <div className="pva-screen">
       <style>{CSS}</style>
 
       <div className="pva-card pva-kpi">
@@ -99,7 +110,7 @@ export default function PantallaVentasPorAno({ tvMode = false }) {
         </div>
       </div>
 
-      <div className="pva-card">
+      <div className={`pva-card pva-table-card${tvMode ? ' pva-fit' : ''}`}>
         <div className="pva-card-title">
           <h2>Ventas por Asesor</h2>
           <span>{asesoresActivos} ASESORES ACTIVOS</span>
@@ -110,7 +121,7 @@ export default function PantallaVentasPorAno({ tvMode = false }) {
           <span className="r">Ventas · Meta anual</span>
         </div>
 
-        <div className="pva-rows">
+        <div className={`pva-rows${tvMode ? ' pva-fit' : ''}`} ref={rowsRef} style={{ '--row-scale': tvMode ? rowScale : 1 }}>
           {visible.map((a, i) => {
             const isOtros = a.ownerId === 'otros-asesores'
             const accent = isOtros ? '#6E8B86' : PALETTE[i % PALETTE.length]
@@ -131,7 +142,7 @@ export default function PantallaVentasPorAno({ tvMode = false }) {
                       fontFamily: 'var(--sans)', fontWeight: 'bold', fontSize: avatarSize * 0.34,
                     }}
                   />
-                  <span className="pva-asesor-name" style={{ fontSize: 14.5 }}>{a.nombre}</span>
+                  <span className="pva-asesor-name">{a.nombre}</span>
                 </div>
                 <div className="pva-metric-ventas">
                   <div className="pva-year-val">{fmtMXN(a.totalVentas)}</div>

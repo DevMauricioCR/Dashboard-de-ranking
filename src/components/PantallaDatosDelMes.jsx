@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useRankingAsesores, useVentasWeb } from '../hooks/useData'
+import useRowFit from '../hooks/useRowFit'
 import AdvisorAvatar from './AdvisorAvatar'
 
 // Paleta y layout exactos del diseño (datos_del_mes.html)
@@ -48,49 +49,57 @@ function colorVars(hex) {
 }
 
 const CSS = `
+.pdm-screen{ height:100%; overflow:auto; display:flex; flex-direction:column; gap:8px; }
 .pdm-card{ background:var(--s1); border:1px solid rgba(255,255,255,0.06); padding:18px; position:relative; }
 .pdm-card::before, .pdm-card::after{ content:''; position:absolute; width:14px; height:14px; pointer-events:none; }
 .pdm-card::before{ top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); }
 .pdm-card::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); }
-.pdm-kpi{ padding:10px 18px; margin-bottom:8px; background:linear-gradient(135deg, rgba(0,255,214,0.08), rgba(255,46,126,0.04)); border-color:rgba(0,255,214,0.3); display:flex; gap:16px; flex-wrap:nowrap; }
+.pdm-table-card{ display:flex; flex-direction:column; }
+.pdm-table-card.pdm-fit{ flex:1; min-height:0; }
+.pdm-kpi{ padding:10px 18px; margin-bottom:8px; background:linear-gradient(135deg, rgba(0,255,214,0.08), rgba(255,46,126,0.04)); border-color:rgba(0,255,214,0.3); display:flex; gap:16px; flex-wrap:nowrap; flex-shrink:0; }
 .pdm-kpi > div{ flex:1 1 0; min-width:0; }
 .pdm-kpi-label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pdm-kpi-value{ font-weight:700; font-size:20px; letter-spacing:-0.01em; color:var(--cyan); text-shadow:0 0 18px rgba(0,255,214,0.35); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pdm-card-title{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.pdm-card-title{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); flex-shrink:0; }
 .pdm-card-title h2{ font-size:16px; font-weight:700; color:var(--text); }
 .pdm-card-title h2::before{ content:'▸ '; color:var(--cyan); }
 .pdm-card-title span{ font-size:11.5px; color:var(--muted); font-weight:600; letter-spacing:0.03em; }
-.pdm-col-heads{ display:grid; grid-template-columns:34px 1fr 190px 150px 190px; gap:14px; padding:0 16px 4px 16px; font-size:11px; font-weight:700; letter-spacing:0.06em; color:var(--muted); text-transform:uppercase; }
+.pdm-col-heads{ display:grid; grid-template-columns:34px 1fr 190px 150px 190px; gap:14px; padding:0 16px 4px 16px; font-size:11px; font-weight:700; letter-spacing:0.06em; color:var(--muted); text-transform:uppercase; flex-shrink:0; }
 .pdm-col-heads .r{ text-align:right; }
-.pdm-rows{ display:flex; flex-direction:column; gap:4px; }
-.pdm-row{ display:grid; grid-template-columns:34px 1fr 190px 150px 190px; align-items:center; gap:14px; background:var(--s2); border:1px solid rgba(255,255,255,0.06); border-left:3px solid var(--c); border-radius:8px; padding:5px 14px; transition:transform .18s ease, box-shadow .18s ease; }
+.pdm-rows{ display:flex; flex-direction:column; gap:calc(4px * var(--row-scale, 1)); }
+.pdm-rows.pdm-fit{ flex:1; min-height:0; overflow:hidden; }
+.pdm-row{ display:grid; grid-template-columns:34px 1fr 190px 150px 190px; align-items:center; gap:14px; background:var(--s2); border:1px solid rgba(255,255,255,0.06); border-left:3px solid var(--c); border-radius:8px; padding:calc(5px * var(--row-scale, 1)) 14px; overflow:hidden; transition:transform .18s ease, box-shadow .18s ease; }
+.pdm-rows.pdm-fit .pdm-row{ flex:1 1 0; min-height:0; }
 .pdm-row:hover{ transform:translateY(-2px); box-shadow:0 8px 22px -8px var(--c-glow); }
 .pdm-row.top1{ background:linear-gradient(90deg, rgba(255,184,0,0.07), var(--s2) 40%); }
-.pdm-rank{ font-weight:800; font-size:15px; color:var(--muted); text-align:center; }
-.pdm-medal{ font-size:19px; line-height:1; text-align:center; }
+.pdm-rank{ font-weight:800; font-size:calc(15px * var(--row-scale, 1)); color:var(--muted); text-align:center; }
+.pdm-medal{ font-size:calc(19px * var(--row-scale, 1)); line-height:1; text-align:center; }
 .pdm-asesor-cell{ display:flex; align-items:center; gap:12px; min-width:0; }
 .pdm-avatar{ border-radius:50%; flex-shrink:0; border:1.5px solid var(--c); box-shadow:0 0 8px var(--c-glow); background:#0d1416; }
-.pdm-asesor-name{ font-weight:700; font-size:14.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pdm-asesor-name{ font-weight:700; font-size:calc(14.5px * var(--row-scale, 1)); color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pdm-metric{ display:flex; flex-direction:column; gap:4px; }
-.pdm-metric-val{ font-weight:700; font-size:14px; text-align:right; color:var(--text); }
+.pdm-metric-val{ font-weight:700; font-size:calc(14px * var(--row-scale, 1)); text-align:right; color:var(--text); }
 .pdm-metric-val.accent{ color:var(--c); }
 .pdm-metric.llamadas{ align-items:center; margin-right:20px; }
 .pdm-metric.llamadas .pdm-metric-val{ text-align:center; }
 .pdm-mini-track{ height:4px; width:100%; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
 .pdm-mini-fill{ height:100%; border-radius:3px; background:var(--c); box-shadow:0 0 6px var(--c-glow); transform-origin:right; transition:width .8s cubic-bezier(0.16,1,0.3,1); }
 .pdm-mini-fill.hit{ background:var(--amber); box-shadow:0 0 8px rgba(255,184,0,0.6); }
-.pdm-meta-label{ font-size:10.5px; text-align:right; color:var(--dim); }
+.pdm-meta-label{ font-size:calc(10.5px * var(--row-scale, 1)); text-align:right; color:var(--dim); }
 .pdm-meta-label.hit{ color:var(--amber); font-weight:700; }
 .pdm-perf{ display:flex; flex-direction:column; align-items:flex-end; gap:2px; }
-.pdm-pill{ display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:20px; font-weight:700; font-size:13px; }
+.pdm-pill{ display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:20px; font-weight:700; font-size:calc(13px * var(--row-scale, 1)); }
 .pdm-pill.up{ background:rgba(95,245,214,0.12); color:#5FF5D6; }
 .pdm-pill.down{ background:rgba(255,107,147,0.12); color:#FF6B93; }
-.pdm-perf-prev{ font-size:10.5px; color:var(--dim); font-weight:500; }
+.pdm-perf-prev{ font-size:calc(10.5px * var(--row-scale, 1)); color:var(--dim); font-weight:500; }
 .pdm-row.web-row{ opacity:0.85; }
 .pdm-web-icon{ border-radius:50%; flex-shrink:0; border:1.5px solid var(--c); box-shadow:0 0 8px var(--c-glow); background:#0d1416; display:flex; align-items:center; justify-content:center; }
 @media (max-width:900px){
+  .pdm-table-card.pdm-fit{ flex:none; }
   .pdm-col-heads{ display:none; }
-  .pdm-row{ grid-template-columns:28px 1fr; grid-template-areas:"rank name" "rank llamadas" "rank ventas" "rank perf"; row-gap:8px; }
+  .pdm-rows.pdm-fit{ flex:none; overflow:visible; }
+  .pdm-rows.pdm-fit .pdm-row{ flex:none; }
+  .pdm-row{ grid-template-columns:28px 1fr; grid-template-areas:"rank name" "rank llamadas" "rank ventas" "rank perf"; row-gap:8px; padding:10px 14px; }
   .pdm-rank, .pdm-medal{ grid-area:rank; }
   .pdm-asesor-cell{ grid-area:name; }
   .pdm-metric.llamadas{ grid-area:llamadas; margin-right:0; align-items:flex-start; }
@@ -125,6 +134,12 @@ export default function PantallaDatosDelMes({ tvMode = false }) {
   const prevRanking = prevQ.data?.ranking || []
   const hasPrevData = prevQ.isSuccess
 
+  // En TV (kiosco sin scroll) las filas se encogen o agrandan automáticamente
+  // según cuántos asesores haya y el alto disponible, para que siempre quepan
+  // todas sin cortarse -- ver useRowFit.
+  const rowCountForFit = ranking.filter(a => a.nombre !== 'Sin asesor asignado').length + (ventasWeb ? 1 : 0)
+  const { containerRef: rowsRef, scale: rowScale } = useRowFit(rowCountForFit, tvMode)
+
   const prevByKey = useMemo(() => {
     const map = new Map()
     for (const row of prevRanking) {
@@ -148,11 +163,6 @@ export default function PantallaDatosDelMes({ tvMode = false }) {
       return { ...a, prevValue, trend }
     })
 
-  // En TV el kiosco no puede hacer scroll (pantalla-kiosk usa overflow:hidden),
-  // así que el avatar/texto NO se agrandan como antes -- con equipos grandes eso
-  // hacía que la tabla se pasara del alto de pantalla y algunos asesores
-  // quedaran invisibles. Se usa el mismo tamaño compacto que en el dashboard normal.
-  const avatarSize = 36
   // "Total Vendido" cuenta un negocio ganado por su fecha de CREACIÓN (ver
   // filterClosedDealsByPeriod en useData.ts), para cuadrar con el tablero de HubSpot
   // -- que siempre está filtrado por "Fecha de creación", nunca por fecha de cierre.
@@ -187,8 +197,10 @@ export default function PantallaDatosDelMes({ tvMode = false }) {
     }] : []),
   ].sort((a, b) => (b.totalVentas || 0) - (a.totalVentas || 0))
 
+  const avatarSize = tvMode ? Math.round(36 * rowScale) : 36
+
   return (
-    <div style={{ height: '100%', overflow: 'auto' }}>
+    <div className="pdm-screen">
       <style>{CSS}</style>
       <div className="pdm-card pdm-kpi">
         <div>
@@ -226,7 +238,7 @@ export default function PantallaDatosDelMes({ tvMode = false }) {
           </div>
         )}
       </div>
-      <div className="pdm-card">
+      <div className={`pdm-card pdm-table-card${tvMode ? ' pdm-fit' : ''}`}>
         <div className="pdm-card-title">
           <h2>Resumen por Asesor</h2>
           <span>{visible.length} ASESORES</span>
@@ -240,7 +252,7 @@ export default function PantallaDatosDelMes({ tvMode = false }) {
           <span className="r">Rendimiento (vs. mes ant.)</span>
         </div>
 
-        <div className="pdm-rows">
+        <div className={`pdm-rows${tvMode ? ' pdm-fit' : ''}`} ref={rowsRef} style={{ '--row-scale': tvMode ? rowScale : 1 }}>
           {rankedRows.map((a, i) => {
             const isWeb = a.kind === 'web'
             const accent = isWeb ? '#4FD1FF' : PALETTE[i % PALETTE.length]
@@ -292,7 +304,7 @@ export default function PantallaDatosDelMes({ tvMode = false }) {
                       }}
                     />
                   )}
-                  <span className="pdm-asesor-name" style={{ fontSize: 14.5 }}>{a.nombre}</span>
+                  <span className="pdm-asesor-name">{a.nombre}</span>
                 </div>
 
                 <div className="pdm-metric llamadas">

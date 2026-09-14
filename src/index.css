@@ -1491,12 +1491,16 @@ body, body * {
 
 /* ---- PANTALLAS DE TV (kiosco standalone, ?view=pantalla-*) ---- */
 .pantalla-kiosk {
-  min-height: 100vh;
+  height: 100vh;
   width: 100vw;
   overflow: hidden;
   padding: 16px 24px 18px;
   display: flex;
   flex-direction: column;
+}
+.pantalla-kiosk > * {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .pantalla-kiosk .pantalla-tv { height: 100%; }
 .pantalla-kiosk .panel-title { font-size: 15px; }

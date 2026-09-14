@@ -21,49 +21,61 @@ function initials(name = '') {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
+// El podio llena la pantalla completa (container-type:size) en vez de vivir
+// en una tarjeta chica flotando en medio del espacio negro. Para que crezca
+// SIN perder las proporciones originales del diseño (y sin dejar huecos raros
+// entre el título y el podio), todas las medidas están en "em", relativas a
+// un único font-size que se calcula una sola vez en .ppm-card según el
+// espacio disponible -- así todo escala junto, como una sola unidad, igual
+// que el diseño de referencia pero más grande. Esto también evita el blur
+// que salía con transform:scale() en el auto 3D: al crecer con font-size en
+// vez de transform, Car3D vuelve a medir su contenedor real (su propio
+// ResizeObserver) y renderiza nítido a ese tamaño.
 const CSS = `
-.ppm-card{ background:var(--s1); border:1px solid rgba(255,255,255,0.06); padding:13px 20px 0 20px; position:relative; overflow:hidden; max-width:620px; margin:0 auto; width:100%; }
+.ppm-outer{ height:calc(100vh - 170px); width:100%; display:flex; align-items:center; justify-content:center; overflow:auto; container-type:size; container-name:ppm; }
+.ppm-outer.tv{ height:100vh; }
+.ppm-card{ background:var(--s1); border:1px solid rgba(255,255,255,0.06); position:relative; overflow:hidden; width:100%; max-width:1600px; display:flex; flex-direction:column; padding:0.8em 1.25em; font-size:clamp(9px, min(3.4cqw, 3.7cqh), 60px); }
 .ppm-card::before, .ppm-card::after{ content:''; position:absolute; width:14px; height:14px; pointer-events:none; }
 .ppm-card::before{ top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); }
 .ppm-card::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); }
-.ppm-card-title{ text-align:center; margin-bottom:4px; }
-.ppm-card-title h2{ font-size:16px; font-weight:700; letter-spacing:0.01em; color:var(--text); }
+.ppm-card-title{ text-align:center; flex-shrink:0; margin-bottom:0.9em; }
+.ppm-card-title h2{ font-weight:700; letter-spacing:0.01em; color:var(--text); font-size:1em; }
 .ppm-card-title h2::before{ content:'▸ '; color:var(--cyan); }
-.ppm-card-title p{ font-size:11px; color:var(--muted); margin-top:3px; font-weight:500; letter-spacing:0.02em; }
-.ppm-stage{ perspective:1400px; padding-top:7px; }
-.ppm-podium{ display:flex; align-items:flex-end; justify-content:center; gap:24px; transform:rotateX(6deg); transform-style:preserve-3d; }
-.ppm-slot{ display:flex; flex-direction:column; align-items:center; width:115px; }
+.ppm-card-title p{ color:var(--muted); margin-top:0.2em; font-weight:500; letter-spacing:0.02em; font-size:0.6875em; }
+.ppm-stage{ display:flex; align-items:flex-end; justify-content:center; perspective:1400px; }
+.ppm-podium{ width:100%; display:flex; align-items:flex-end; justify-content:center; gap:1.5em; transform:rotateX(6deg); transform-style:preserve-3d; }
+.ppm-slot{ display:flex; flex-direction:column; align-items:center; width:7.1875em; flex-shrink:0; }
 .ppm-slot.p1{ order:2; }
 .ppm-slot.p2{ order:1; }
 .ppm-slot.p3{ order:3; }
-.ppm-avatar{ border-radius:50%; background:#0d1416; margin-bottom:6px; position:relative; z-index:2; }
-.ppm-slot.p1 .ppm-avatar{ width:58px; height:58px; font-size:20px; border:3px solid #FFD23F; box-shadow:0 0 22px rgba(255,210,63,0.55); }
-.ppm-slot.p2 .ppm-avatar{ width:46px; height:46px; font-size:15px; border:2px solid #D9E4E6; box-shadow:0 0 18px rgba(217,228,230,0.45); }
-.ppm-slot.p3 .ppm-avatar{ width:42px; height:42px; font-size:14px; border:2px solid #E08A45; box-shadow:0 0 16px rgba(224,138,69,0.4); }
-.ppm-crown{ margin-bottom:3px; animation:ppmFloat 2.2s ease-in-out infinite; filter:drop-shadow(0 0 10px rgba(255,210,63,0.6)); }
-.ppm-slot.p1 .ppm-crown{ font-size:23px; }
-.ppm-slot.p2 .ppm-crown{ font-size:15px; filter:drop-shadow(0 0 8px rgba(217,228,230,0.55)); }
-.ppm-slot.p3 .ppm-crown{ font-size:13px; filter:drop-shadow(0 0 8px rgba(224,138,69,0.5)); }
+.ppm-avatar{ border-radius:50%; background:#0d1416; margin-bottom:0.375em; position:relative; z-index:2; flex-shrink:0; }
+.ppm-slot.p1 .ppm-avatar{ width:3.625em; height:3.625em; font-size:1.25em; border:3px solid #FFD23F; box-shadow:0 0 22px rgba(255,210,63,0.55); }
+.ppm-slot.p2 .ppm-avatar{ width:2.875em; height:2.875em; font-size:0.97em; border:2px solid #D9E4E6; box-shadow:0 0 18px rgba(217,228,230,0.45); }
+.ppm-slot.p3 .ppm-avatar{ width:2.625em; height:2.625em; font-size:0.89em; border:2px solid #E08A45; box-shadow:0 0 16px rgba(224,138,69,0.4); }
+.ppm-crown{ margin-bottom:0.19em; flex-shrink:0; animation:ppmFloat 2.2s ease-in-out infinite; filter:drop-shadow(0 0 10px rgba(255,210,63,0.6)); }
+.ppm-slot.p1 .ppm-crown{ font-size:1.4375em; }
+.ppm-slot.p2 .ppm-crown{ font-size:0.9375em; filter:drop-shadow(0 0 8px rgba(217,228,230,0.55)); }
+.ppm-slot.p3 .ppm-crown{ font-size:0.8125em; filter:drop-shadow(0 0 8px rgba(224,138,69,0.5)); }
 @keyframes ppmFloat{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }
-.ppm-car{ margin-bottom:4px; }
-.ppm-slot.p1 .ppm-car{ width:130px; filter:drop-shadow(0 4px 10px rgba(255,210,63,0.4)); }
-.ppm-slot.p2 .ppm-car{ width:100px; filter:drop-shadow(0 4px 8px rgba(217,228,230,0.35)); }
-.ppm-slot.p3 .ppm-car{ width:86px; filter:drop-shadow(0 4px 8px rgba(224,138,69,0.3)); }
-.ppm-name{ font-weight:700; font-size:12.5px; text-align:center; line-height:1.25; margin-bottom:3px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
-.ppm-slot.p1 .ppm-name{ font-size:14.5px; }
-.ppm-value{ font-weight:800; font-size:12.5px; text-align:center; margin-bottom:9px; }
-.ppm-slot.p1 .ppm-value{ color:#FFD23F; font-size:15px; text-shadow:0 0 14px rgba(255,210,63,0.4); }
+.ppm-car{ margin-bottom:0.25em; height:4.75em; flex-shrink:0; }
+.ppm-slot.p1 .ppm-car{ width:8.125em; filter:drop-shadow(0 4px 10px rgba(255,210,63,0.4)); }
+.ppm-slot.p2 .ppm-car{ width:6.25em; filter:drop-shadow(0 4px 8px rgba(217,228,230,0.35)); }
+.ppm-slot.p3 .ppm-car{ width:5.375em; filter:drop-shadow(0 4px 8px rgba(224,138,69,0.3)); }
+.ppm-name{ font-weight:700; text-align:center; line-height:1.25; margin-bottom:0.19em; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; flex-shrink:0; font-size:0.78125em; }
+.ppm-slot.p1 .ppm-name{ font-size:0.90625em; }
+.ppm-value{ font-weight:800; text-align:center; margin-bottom:0.5625em; flex-shrink:0; font-size:0.78125em; }
+.ppm-slot.p1 .ppm-value{ color:#FFD23F; font-size:0.9375em; text-shadow:0 0 14px rgba(255,210,63,0.4); }
 .ppm-slot.p2 .ppm-value{ color:#D9E4E6; }
 .ppm-slot.p3 .ppm-value{ color:#E08A45; }
-.ppm-pillar{ position:relative; width:100%; transform-style:preserve-3d; animation:ppmRise 0.65s cubic-bezier(.2,1,.3,1) both; }
+.ppm-pillar{ position:relative; width:100%; flex-shrink:0; transform-style:preserve-3d; animation:ppmRise 0.65s cubic-bezier(.2,1,.3,1) both; }
 @keyframes ppmRise{ from{ transform:scaleY(0); opacity:0; } to{ transform:scaleY(1); opacity:1; } }
-.ppm-front{ position:relative; width:100%; height:100%; display:flex; align-items:flex-start; justify-content:center; padding-top:8px; border-radius:6px 0 0 0; }
-.ppm-front::before{ content:''; position:absolute; top:-11px; left:0; width:100%; height:11px; transform:skewX(-45deg); transform-origin:bottom left; }
-.ppm-front::after{ content:''; position:absolute; top:0; right:-11px; width:11px; height:100%; transform:skewY(-45deg); transform-origin:top left; }
-.ppm-rank{ font-weight:800; font-size:22px; position:relative; z-index:1; }
-.ppm-slot.p1 .ppm-pillar{ height:76px; animation-delay:0.22s; }
-.ppm-slot.p2 .ppm-pillar{ height:54px; animation-delay:0.05s; }
-.ppm-slot.p3 .ppm-pillar{ height:40px; animation-delay:0.36s; }
+.ppm-front{ position:relative; width:100%; height:100%; display:flex; align-items:flex-start; justify-content:center; padding-top:0.5em; border-radius:6px 0 0 0; }
+.ppm-front::before{ content:''; position:absolute; top:-0.7em; left:0; width:100%; height:0.7em; transform:skewX(-45deg); transform-origin:bottom left; }
+.ppm-front::after{ content:''; position:absolute; top:0; right:-0.7em; width:0.7em; height:100%; transform:skewY(-45deg); transform-origin:top left; }
+.ppm-rank{ font-weight:800; position:relative; z-index:1; font-size:1.375em; }
+.ppm-slot.p1 .ppm-pillar{ height:4.75em; animation-delay:0.22s; }
+.ppm-slot.p2 .ppm-pillar{ height:3.375em; animation-delay:0.05s; }
+.ppm-slot.p3 .ppm-pillar{ height:2.5em; animation-delay:0.36s; }
 .ppm-slot.p1 .ppm-front{ background:linear-gradient(180deg, #FFD23F, #B8891C); box-shadow:0 0 30px rgba(255,210,63,0.3); }
 .ppm-slot.p1 .ppm-front::before{ background:#FFE9A8; }
 .ppm-slot.p1 .ppm-front::after{ background:#7A5410; }
@@ -76,23 +88,8 @@ const CSS = `
 .ppm-slot.p3 .ppm-front::before{ background:#F2C093; }
 .ppm-slot.p3 .ppm-front::after{ background:#5C300E; }
 .ppm-slot.p3 .ppm-rank{ color:#3A1E08; }
-.ppm-floor{ height:6px; margin:0 -20px; background:linear-gradient(90deg, transparent, rgba(0,255,214,0.12), transparent); border-top:1px solid rgba(255,255,255,0.08); }
-.ppm-footer{ text-align:center; padding:7px 0 9px 0; font-size:10px; color:var(--dim); font-weight:500; letter-spacing:0.02em; }
-@media (max-width:640px){
-  .ppm-card{ max-width:100%; }
-  .ppm-podium{ gap:14px; }
-  .ppm-slot{ width:31%; }
-  .ppm-slot.p1 .ppm-avatar{ width:54px; height:54px; font-size:18px; }
-  .ppm-slot.p2 .ppm-avatar{ width:44px; height:44px; font-size:15px; }
-  .ppm-slot.p3 .ppm-avatar{ width:40px; height:40px; font-size:13px; }
-  .ppm-name{ font-size:11px; white-space:normal; overflow:visible; text-overflow:clip; }
-  .ppm-slot.p1 .ppm-name{ font-size:12px; }
-  .ppm-value{ font-size:11px; }
-  .ppm-slot.p1 .ppm-value{ font-size:13px; }
-  .ppm-slot.p1 .ppm-car{ width:100%; max-width:110px; }
-  .ppm-slot.p2 .ppm-car{ width:100%; max-width:86px; }
-  .ppm-slot.p3 .ppm-car{ width:100%; max-width:76px; }
-}
+.ppm-floor{ height:0.375em; flex-shrink:0; background:linear-gradient(90deg, transparent, rgba(0,255,214,0.12), transparent); border-top:1px solid rgba(255,255,255,0.08); }
+.ppm-footer{ text-align:center; flex-shrink:0; color:var(--dim); font-weight:500; letter-spacing:0.02em; padding:0.375em 0; font-size:0.625em; }
 `
 
 export default function PantallaPodioDelMes({ tvMode = false }) {
@@ -110,13 +107,9 @@ export default function PantallaPodioDelMes({ tvMode = false }) {
     .map((a, i) => ({ ...a, rank: i + 1 }))
 
   const now = new Date()
-  // Tarjeta con ancho fijo (max-width en .ppm-card) para que se vea chica
-  // en la TV en vez de estirarse a toda la pantalla -- sin pasarse tampoco
-  // del alto disponible en resoluciones más chicas como 1280x720.
-  const carHeight = tvMode ? 70 : 76
 
   return (
-    <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+    <div className={`ppm-outer${tvMode ? ' tv' : ''}`}>
       <style>{CSS}</style>
       <div className="ppm-card">
         <div className="ppm-card-title">
@@ -145,7 +138,7 @@ export default function PantallaPodioDelMes({ tvMode = false }) {
                   <div className="ppm-name">{a.nombre}</div>
                   <div className="ppm-value">{MEDALS[a.rank - 1]} ${(a.totalVentas || 0).toLocaleString()}</div>
                   <div className="ppm-car">
-                    <Car3D color={colors.accent} height={carHeight} />
+                    <Car3D color={colors.accent} height="100%" />
                   </div>
                   <div className="ppm-pillar">
                     <div className="ppm-front"><div className="ppm-rank">{a.rank}</div></div>
