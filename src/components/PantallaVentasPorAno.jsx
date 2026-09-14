@@ -35,27 +35,27 @@ function colorVars(hex) {
 }
 
 const CSS = `
-.pva-card{ background:var(--s1); border:1px solid rgba(255,255,255,0.06); padding:24px; position:relative; }
+.pva-card{ background:var(--s1); border:1px solid rgba(255,255,255,0.06); padding:18px; position:relative; }
 .pva-card::before, .pva-card::after{ content:''; position:absolute; width:14px; height:14px; pointer-events:none; }
 .pva-card::before{ top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); }
 .pva-card::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); }
-.pva-kpi{ padding:26px 28px; margin-bottom:16px; background:linear-gradient(135deg, rgba(0,255,214,0.08), rgba(255,46,126,0.04)); border-color:rgba(0,255,214,0.3); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+.pva-kpi{ padding:12px 22px; margin-bottom:8px; background:linear-gradient(135deg, rgba(0,255,214,0.08), rgba(255,46,126,0.04)); border-color:rgba(0,255,214,0.3); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
 .pva-kpi-label{ font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.09em; font-weight:700; }
-.pva-kpi-value{ font-weight:700; font-size:38px; letter-spacing:-0.01em; color:var(--cyan); text-shadow:0 0 18px rgba(0,255,214,0.35); margin-top:8px; }
-.pva-card-title{ display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.pva-kpi-value{ font-weight:700; font-size:24px; letter-spacing:-0.01em; color:var(--cyan); text-shadow:0 0 18px rgba(0,255,214,0.35); margin-top:4px; }
+.pva-card-title{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); }
 .pva-card-title h2{ font-size:16px; font-weight:700; color:var(--text); }
 .pva-card-title h2::before{ content:'▸ '; color:var(--cyan); }
 .pva-card-title span{ font-size:11.5px; color:var(--muted); font-weight:600; letter-spacing:0.03em; }
-.pva-col-heads{ display:grid; grid-template-columns:1fr 190px; gap:14px; padding:0 16px 10px 16px; font-size:11px; font-weight:700; letter-spacing:0.06em; color:var(--muted); text-transform:uppercase; }
+.pva-col-heads{ display:grid; grid-template-columns:1fr 190px; gap:14px; padding:0 16px 4px 16px; font-size:11px; font-weight:700; letter-spacing:0.06em; color:var(--muted); text-transform:uppercase; }
 .pva-col-heads .r{ text-align:right; }
-.pva-rows{ display:flex; flex-direction:column; gap:8px; }
-.pva-row{ display:grid; grid-template-columns:1fr 190px; align-items:center; gap:14px; background:var(--s2); border:1px solid rgba(255,255,255,0.06); border-left:3px solid var(--c); border-radius:8px; padding:13px 16px; transition:transform .18s ease, box-shadow .18s ease; }
+.pva-rows{ display:flex; flex-direction:column; gap:4px; }
+.pva-row{ display:grid; grid-template-columns:1fr 190px; align-items:center; gap:14px; background:var(--s2); border:1px solid rgba(255,255,255,0.06); border-left:3px solid var(--c); border-radius:8px; padding:5px 14px; transition:transform .18s ease, box-shadow .18s ease; }
 .pva-row:hover{ transform:translateY(-2px); box-shadow:0 8px 22px -8px var(--c-glow); }
 .pva-asesor-cell{ display:flex; align-items:center; gap:12px; min-width:0; }
 .pva-avatar{ border-radius:50%; flex-shrink:0; border:1.5px solid var(--c); box-shadow:0 0 8px var(--c-glow); background:#0d1416; }
 .pva-asesor-name{ font-weight:700; font-size:14.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pva-metric-ventas{ display:flex; flex-direction:column; gap:6px; }
-.pva-year-val{ text-align:right; font-weight:700; font-size:14.5px; color:var(--c); }
+.pva-metric-ventas{ display:flex; flex-direction:column; gap:3px; }
+.pva-year-val{ text-align:right; font-weight:700; font-size:13px; color:var(--c); }
 .pva-mini-track{ height:4px; width:100%; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
 .pva-mini-fill{ height:100%; border-radius:3px; background:var(--c); box-shadow:0 0 6px var(--c-glow); transform-origin:right; transition:width .8s cubic-bezier(0.16,1,0.3,1); }
 .pva-mini-fill.hit{ background:var(--amber); box-shadow:0 0 8px rgba(255,184,0,0.6); }
@@ -81,7 +81,11 @@ export default function PantallaVentasPorAno({ tvMode = false }) {
 
   const visible = ranking.filter(a => a.nombre !== 'Sin asesor asignado')
   const totalGeneral = visible.reduce((s, a) => s + (a.totalVentas || 0), 0)
-  const avatarSize = tvMode ? 46 : 38
+  // En TV el kiosco no puede hacer scroll (pantalla-kiosk usa overflow:hidden):
+  // agrandar el avatar/texto en ese modo hacía que la tabla se pasara del alto
+  // de pantalla y varios asesores quedaran invisibles (mismo problema que ya
+  // se corrigió en Datos del Día/Mes).
+  const avatarSize = 36
   const asesoresActivos = visible.filter(a => a.ownerId !== 'otros-asesores').length
 
   return (
@@ -127,7 +131,7 @@ export default function PantallaVentasPorAno({ tvMode = false }) {
                       fontFamily: 'var(--sans)', fontWeight: 'bold', fontSize: avatarSize * 0.34,
                     }}
                   />
-                  <span className="pva-asesor-name" style={{ fontSize: tvMode ? 16 : 14.5 }}>{a.nombre}</span>
+                  <span className="pva-asesor-name" style={{ fontSize: 14.5 }}>{a.nombre}</span>
                 </div>
                 <div className="pva-metric-ventas">
                   <div className="pva-year-val">{fmtMXN(a.totalVentas)}</div>
