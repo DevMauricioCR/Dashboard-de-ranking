@@ -22,48 +22,48 @@ function initials(name = '') {
 }
 
 const CSS = `
-.ppm-card{ background:var(--s1); border:1px solid rgba(255,255,255,0.06); padding:16px 24px 0 24px; position:relative; overflow:hidden; }
+.ppm-card{ background:var(--s1); border:1px solid rgba(255,255,255,0.06); padding:10px 16px 0 16px; position:relative; overflow:hidden; max-width:440px; margin:0 auto; width:100%; }
 .ppm-card::before, .ppm-card::after{ content:''; position:absolute; width:14px; height:14px; pointer-events:none; }
 .ppm-card::before{ top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); }
 .ppm-card::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); }
-.ppm-card-title{ text-align:center; margin-bottom:4px; }
-.ppm-card-title h2{ font-size:17px; font-weight:700; letter-spacing:0.01em; color:var(--text); }
+.ppm-card-title{ text-align:center; margin-bottom:3px; }
+.ppm-card-title h2{ font-size:13px; font-weight:700; letter-spacing:0.01em; color:var(--text); }
 .ppm-card-title h2::before{ content:'▸ '; color:var(--cyan); }
-.ppm-card-title p{ font-size:11px; color:var(--muted); margin-top:3px; font-weight:500; letter-spacing:0.02em; }
-.ppm-stage{ perspective:1400px; padding-top:8px; }
-.ppm-podium{ display:flex; align-items:flex-end; justify-content:center; gap:32px; transform:rotateX(6deg); transform-style:preserve-3d; }
-.ppm-slot{ display:flex; flex-direction:column; align-items:center; width:130px; }
+.ppm-card-title p{ font-size:9px; color:var(--muted); margin-top:2px; font-weight:500; letter-spacing:0.02em; }
+.ppm-stage{ perspective:1400px; padding-top:5px; }
+.ppm-podium{ display:flex; align-items:flex-end; justify-content:center; gap:18px; transform:rotateX(6deg); transform-style:preserve-3d; }
+.ppm-slot{ display:flex; flex-direction:column; align-items:center; width:85px; }
 .ppm-slot.p1{ order:2; }
 .ppm-slot.p2{ order:1; }
 .ppm-slot.p3{ order:3; }
-.ppm-avatar{ border-radius:50%; background:#0d1416; margin-bottom:8px; position:relative; z-index:2; }
-.ppm-slot.p1 .ppm-avatar{ width:64px; height:64px; font-size:22px; border:3px solid #FFD23F; box-shadow:0 0 26px rgba(255,210,63,0.55); }
-.ppm-slot.p2 .ppm-avatar{ width:50px; height:50px; font-size:17px; border:3px solid #D9E4E6; box-shadow:0 0 20px rgba(217,228,230,0.45); }
-.ppm-slot.p3 .ppm-avatar{ width:46px; height:46px; font-size:15px; border:3px solid #E08A45; box-shadow:0 0 18px rgba(224,138,69,0.4); }
-.ppm-crown{ margin-bottom:4px; animation:ppmFloat 2.2s ease-in-out infinite; filter:drop-shadow(0 0 10px rgba(255,210,63,0.6)); }
-.ppm-slot.p1 .ppm-crown{ font-size:26px; }
-.ppm-slot.p2 .ppm-crown{ font-size:16px; filter:drop-shadow(0 0 8px rgba(217,228,230,0.55)); }
-.ppm-slot.p3 .ppm-crown{ font-size:14px; filter:drop-shadow(0 0 8px rgba(224,138,69,0.5)); }
+.ppm-avatar{ border-radius:50%; background:#0d1416; margin-bottom:5px; position:relative; z-index:2; }
+.ppm-slot.p1 .ppm-avatar{ width:42px; height:42px; font-size:15px; border:2px solid #FFD23F; box-shadow:0 0 18px rgba(255,210,63,0.55); }
+.ppm-slot.p2 .ppm-avatar{ width:33px; height:33px; font-size:11px; border:2px solid #D9E4E6; box-shadow:0 0 14px rgba(217,228,230,0.45); }
+.ppm-slot.p3 .ppm-avatar{ width:30px; height:30px; font-size:10px; border:2px solid #E08A45; box-shadow:0 0 12px rgba(224,138,69,0.4); }
+.ppm-crown{ margin-bottom:2px; animation:ppmFloat 2.2s ease-in-out infinite; filter:drop-shadow(0 0 10px rgba(255,210,63,0.6)); }
+.ppm-slot.p1 .ppm-crown{ font-size:17px; }
+.ppm-slot.p2 .ppm-crown{ font-size:11px; filter:drop-shadow(0 0 8px rgba(217,228,230,0.55)); }
+.ppm-slot.p3 .ppm-crown{ font-size:10px; filter:drop-shadow(0 0 8px rgba(224,138,69,0.5)); }
 @keyframes ppmFloat{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }
-.ppm-car{ margin-bottom:5px; }
-.ppm-slot.p1 .ppm-car{ width:150px; filter:drop-shadow(0 4px 10px rgba(255,210,63,0.4)); }
-.ppm-slot.p2 .ppm-car{ width:116px; filter:drop-shadow(0 4px 8px rgba(217,228,230,0.35)); }
-.ppm-slot.p3 .ppm-car{ width:100px; filter:drop-shadow(0 4px 8px rgba(224,138,69,0.3)); }
-.ppm-name{ font-weight:700; font-size:12.5px; text-align:center; line-height:1.25; margin-bottom:3px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
-.ppm-slot.p1 .ppm-name{ font-size:14px; }
-.ppm-value{ font-weight:800; font-size:12.5px; text-align:center; margin-bottom:10px; }
-.ppm-slot.p1 .ppm-value{ color:#FFD23F; font-size:15.5px; text-shadow:0 0 14px rgba(255,210,63,0.4); }
+.ppm-car{ margin-bottom:3px; }
+.ppm-slot.p1 .ppm-car{ width:96px; filter:drop-shadow(0 4px 10px rgba(255,210,63,0.4)); }
+.ppm-slot.p2 .ppm-car{ width:74px; filter:drop-shadow(0 4px 8px rgba(217,228,230,0.35)); }
+.ppm-slot.p3 .ppm-car{ width:64px; filter:drop-shadow(0 4px 8px rgba(224,138,69,0.3)); }
+.ppm-name{ font-weight:700; font-size:9.5px; text-align:center; line-height:1.25; margin-bottom:2px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.ppm-slot.p1 .ppm-name{ font-size:11px; }
+.ppm-value{ font-weight:800; font-size:9.5px; text-align:center; margin-bottom:6px; }
+.ppm-slot.p1 .ppm-value{ color:#FFD23F; font-size:11.5px; text-shadow:0 0 14px rgba(255,210,63,0.4); }
 .ppm-slot.p2 .ppm-value{ color:#D9E4E6; }
 .ppm-slot.p3 .ppm-value{ color:#E08A45; }
 .ppm-pillar{ position:relative; width:100%; transform-style:preserve-3d; animation:ppmRise 0.65s cubic-bezier(.2,1,.3,1) both; }
 @keyframes ppmRise{ from{ transform:scaleY(0); opacity:0; } to{ transform:scaleY(1); opacity:1; } }
-.ppm-front{ position:relative; width:100%; height:100%; display:flex; align-items:flex-start; justify-content:center; padding-top:9px; border-radius:6px 0 0 0; }
-.ppm-front::before{ content:''; position:absolute; top:-11px; left:0; width:100%; height:11px; transform:skewX(-45deg); transform-origin:bottom left; }
-.ppm-front::after{ content:''; position:absolute; top:0; right:-11px; width:11px; height:100%; transform:skewY(-45deg); transform-origin:top left; }
-.ppm-rank{ font-weight:800; font-size:24px; position:relative; z-index:1; }
-.ppm-slot.p1 .ppm-pillar{ height:90px; animation-delay:0.22s; }
-.ppm-slot.p2 .ppm-pillar{ height:64px; animation-delay:0.05s; }
-.ppm-slot.p3 .ppm-pillar{ height:48px; animation-delay:0.36s; }
+.ppm-front{ position:relative; width:100%; height:100%; display:flex; align-items:flex-start; justify-content:center; padding-top:6px; border-radius:6px 0 0 0; }
+.ppm-front::before{ content:''; position:absolute; top:-8px; left:0; width:100%; height:8px; transform:skewX(-45deg); transform-origin:bottom left; }
+.ppm-front::after{ content:''; position:absolute; top:0; right:-8px; width:8px; height:100%; transform:skewY(-45deg); transform-origin:top left; }
+.ppm-rank{ font-weight:800; font-size:16px; position:relative; z-index:1; }
+.ppm-slot.p1 .ppm-pillar{ height:56px; animation-delay:0.22s; }
+.ppm-slot.p2 .ppm-pillar{ height:40px; animation-delay:0.05s; }
+.ppm-slot.p3 .ppm-pillar{ height:30px; animation-delay:0.36s; }
 .ppm-slot.p1 .ppm-front{ background:linear-gradient(180deg, #FFD23F, #B8891C); box-shadow:0 0 30px rgba(255,210,63,0.3); }
 .ppm-slot.p1 .ppm-front::before{ background:#FFE9A8; }
 .ppm-slot.p1 .ppm-front::after{ background:#7A5410; }
@@ -76,9 +76,10 @@ const CSS = `
 .ppm-slot.p3 .ppm-front::before{ background:#F2C093; }
 .ppm-slot.p3 .ppm-front::after{ background:#5C300E; }
 .ppm-slot.p3 .ppm-rank{ color:#3A1E08; }
-.ppm-floor{ height:8px; margin:0 -24px; background:linear-gradient(90deg, transparent, rgba(0,255,214,0.12), transparent); border-top:1px solid rgba(255,255,255,0.08); }
-.ppm-footer{ text-align:center; padding:8px 0 10px 0; font-size:10.5px; color:var(--dim); font-weight:500; letter-spacing:0.02em; }
+.ppm-floor{ height:5px; margin:0 -16px; background:linear-gradient(90deg, transparent, rgba(0,255,214,0.12), transparent); border-top:1px solid rgba(255,255,255,0.08); }
+.ppm-footer{ text-align:center; padding:5px 0 7px 0; font-size:8.5px; color:var(--dim); font-weight:500; letter-spacing:0.02em; }
 @media (max-width:640px){
+  .ppm-card{ max-width:100%; }
   .ppm-podium{ gap:14px; }
   .ppm-slot{ width:31%; }
   .ppm-slot.p1 .ppm-avatar{ width:54px; height:54px; font-size:18px; }
@@ -109,13 +110,13 @@ export default function PantallaPodioDelMes({ tvMode = false }) {
     .map((a, i) => ({ ...a, rank: i + 1 }))
 
   const now = new Date()
-  // En TV el kiosco no puede hacer scroll (pantalla-kiosk usa overflow:hidden):
-  // si el podio se pasa del alto de pantalla, el piso/número del pilar y el
-  // footer quedan cortados sin avisar. Se mantiene compacto con margen de sobra.
-  const carHeight = tvMode ? 80 : 90
+  // Pedido explícito: que se vea chiquito en la TV, no que ocupe toda la
+  // pantalla -- de paso deja de sobrar margen de sobra sobre el alto
+  // disponible (antes ya se ajustaba para no cortarse, pero se veía grande).
+  const carHeight = tvMode ? 52 : 58
 
   return (
-    <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+    <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
       <style>{CSS}</style>
       <div className="ppm-card">
         <div className="ppm-card-title">
