@@ -94,7 +94,7 @@ export default function PantallaVentasPorAno({ tvMode = false }) {
 
       <div className="pva-card pva-kpi">
         <div>
-          <div className="pva-kpi-label">// Ventas Totales · hoja Venta-Anual-Ranking + mes en curso (HubSpot)</div>
+          <div className="pva-kpi-label">// Ventas totales</div>
           <div className="pva-kpi-value">{fmtMXN(totalGeneral)}</div>
         </div>
       </div>
