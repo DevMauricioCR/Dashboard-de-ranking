@@ -101,6 +101,13 @@ const CSS = `
   .pdd-table th:nth-child(5), .pdd-table td:nth-child(5){ display:none; }
   .pdd-meta-cell{ min-width:100px; }
 }
+@media (max-width:480px){
+  /* A este ancho ya no cabe ni la columna de SHARE (barra + meta) junto con
+     asesor y total -- se ocultaba el contenido sin scroll (overflow-x:hidden
+     global) en vez de recortarlo con una barra, así que mejor quitarla. */
+  .pdd-table th:nth-child(6), .pdd-table td:nth-child(6){ display:none; }
+  .pdd-asesor-name{ font-size:13px; }
+}
 @media (max-width:768px){
   /* El nowrap de .pdd-kpi es para que quepa en una sola línea en el kiosco
      de TV (pantalla ancha, sin scroll); en celular sí hay scroll, así que
