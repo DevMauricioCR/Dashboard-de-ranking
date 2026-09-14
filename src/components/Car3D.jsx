@@ -61,6 +61,15 @@ export default function Car3D({ color, height = 160 }) {
 
     let sphereRadius = 1
     let lookAtY = 0
+    // Offset horizontal del auto (ver rig.position.x más abajo). Si la cámara
+    // apuntara siempre a x=0 en vez de a este punto, el encuadre quedaría
+    // descentrado en proporción al FOV horizontal — que cambia según el
+    // aspect ratio del contenedor. En canvases angostos (2°/3° lugar, más
+    // angostos que el de 1°) el FOV horizontal es menor, así que ese mismo
+    // offset fijo se veía como un descentrado mucho más notorio (el auto
+    // pegado al borde derecho del canvas). Al mover cámara y lookAt juntos
+    // sobre este punto, el encuadre queda centrado sin importar el aspect.
+    let lookAtX = 0
     // Coloca la cámara a la distancia justa para que la esfera envolvente
     // del auto llene el encuadre, tomando en cuenta tanto el FOV vertical
     // como el horizontal (según el aspect del contenedor) — así el auto no
@@ -68,7 +77,12 @@ export default function Car3D({ color, height = 160 }) {
     function fitCamera() {
       const w = container.clientWidth || 1
       const h = container.clientHeight || 1
-      renderer.setSize(w, h, false)
+      // updateStyle=true (default): el canvas no tiene su propio ancho/alto
+      // CSS, así que si no se lo ponemos acá queda con el tamaño intrínseco
+      // del buffer (w/h × devicePixelRatio) — en pantallas con DPR>1 (la
+      // mayoría de TVs y celulares) el canvas se veía 2-3x más grande que su
+      // contenedor y se encimaba con los autos vecinos.
+      renderer.setSize(w, h, true)
       const aspect = w / h
       camera.aspect = aspect
 
@@ -78,8 +92,8 @@ export default function Car3D({ color, height = 160 }) {
       const distH = sphereRadius / Math.sin(hFov / 2)
       const distance = Math.max(distV, distH) * 0.6
 
-      camera.position.set(camDir.x * distance, camDir.y * distance + lookAtY, camDir.z * distance)
-      camera.lookAt(0, lookAtY, 0)
+      camera.position.set(camDir.x * distance + lookAtX, camDir.y * distance + lookAtY, camDir.z * distance)
+      camera.lookAt(lookAtX, lookAtY, 0)
       camera.updateProjectionMatrix()
     }
     fitCamera()
@@ -123,8 +137,11 @@ export default function Car3D({ color, height = 160 }) {
       // Nudge horizontal: con este ángulo de cámara el auto se ve un poco
       // recargado a la izquierda dentro de su recuadro; este offset lo
       // recorre un poco a la derecha (no afecta el eje de giro, que sigue
-      // siendo el propio centro del auto).
+      // siendo el propio centro del auto). La cámara apunta a este mismo
+      // offset (lookAtX, ver fitCamera) para que el encuadre quede centrado
+      // sin importar el aspect ratio del canvas.
       rig.position.x = 0.08
+      lookAtX = rig.position.x
       scene.add(rig)
 
       sphereRadius = 1
