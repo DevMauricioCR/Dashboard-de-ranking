@@ -64,21 +64,22 @@ function colorVars(hex) {
 }
 
 const CSS = `
-.pdd-card{ background:var(--s1); border:1px solid rgba(255,255,255,0.06); padding:24px; position:relative; }
+.pdd-card{ background:var(--s1); border:1px solid rgba(255,255,255,0.06); padding:18px; position:relative; }
 .pdd-card::before, .pdd-card::after{ content:''; position:absolute; width:14px; height:14px; pointer-events:none; }
 .pdd-card::before{ top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); }
 .pdd-card::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); }
-.pdd-kpi{ padding:22px 28px; margin-bottom:16px; background:linear-gradient(135deg, rgba(0,255,214,0.08), rgba(255,46,126,0.04)); border-color:rgba(0,255,214,0.3); display:flex; gap:40px; flex-wrap:wrap; }
-.pdd-kpi-label{ font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.09em; font-weight:700; }
-.pdd-kpi-value{ font-weight:700; font-size:30px; letter-spacing:-0.01em; color:var(--cyan); text-shadow:0 0 18px rgba(0,255,214,0.35); margin-top:6px; }
-.pdd-card-title{ display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.pdd-kpi{ padding:10px 18px; margin-bottom:8px; background:linear-gradient(135deg, rgba(0,255,214,0.08), rgba(255,46,126,0.04)); border-color:rgba(0,255,214,0.3); display:flex; gap:16px; flex-wrap:nowrap; }
+.pdd-kpi > div{ flex:1 1 0; min-width:0; }
+.pdd-kpi-label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pdd-kpi-value{ font-weight:700; font-size:20px; letter-spacing:-0.01em; color:var(--cyan); text-shadow:0 0 18px rgba(0,255,214,0.35); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pdd-card-title{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); }
 .pdd-card-title h2{ font-size:16px; font-weight:700; color:var(--text); }
 .pdd-card-title h2::before{ content:'▸ '; color:var(--cyan); }
 .pdd-card-title span{ font-size:11.5px; color:var(--muted); font-weight:600; letter-spacing:0.03em; }
 .pdd-table{ width:100%; border-collapse:collapse; }
-.pdd-table th{ text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); font-weight:700; padding:0 12px 14px 12px; }
+.pdd-table th{ text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); font-weight:700; padding:0 12px 6px 12px; }
 .pdd-table th.num{ text-align:right; }
-.pdd-table td{ padding:14px 12px; font-size:14.5px; border-top:1px solid rgba(255,255,255,0.06); vertical-align:middle; color:var(--text); }
+.pdd-table td{ padding:6px 12px; font-size:14.5px; border-top:1px solid rgba(255,255,255,0.06); vertical-align:middle; color:var(--text); }
 .pdd-table tr:hover td{ background:rgba(0,255,214,0.02); }
 .pdd-rank{ font-weight:700; font-size:14px; color:var(--muted); }
 .pdd-asesor-cell{ display:flex; align-items:center; gap:12px; }
@@ -100,6 +101,14 @@ const CSS = `
   .pdd-table th:nth-child(5), .pdd-table td:nth-child(5){ display:none; }
   .pdd-meta-cell{ min-width:100px; }
 }
+@media (max-width:768px){
+  /* El nowrap de .pdd-kpi es para que quepa en una sola línea en el kiosco
+     de TV (pantalla ancha, sin scroll); en celular sí hay scroll, así que
+     mejor dejar que cada KPI se lea completo en vez de truncarlo. */
+  .pdd-kpi{ flex-wrap:wrap; gap:16px 28px; }
+  .pdd-kpi > div{ flex:1 1 40%; }
+  .pdd-kpi-label, .pdd-kpi-value{ white-space:normal; overflow:visible; text-overflow:clip; }
+}
 `
 
 export default function PantallaDatosDelDia({ tvMode = false }) {
@@ -119,7 +128,11 @@ export default function PantallaDatosDelDia({ tvMode = false }) {
   if (diaQ.isError && !diaQ.data) return <div className="state-box" style={{ paddingTop: 60, color: 'var(--red-w)' }}>Error: {diaQ.error?.message}</div>
 
   const visible = ranking.filter(a => a.nombre !== 'Sin asesor asignado')
-  const avatarSize = tvMode ? 46 : 38
+  // En TV el kiosco no puede hacer scroll (pantalla-kiosk usa overflow:hidden),
+  // así que el avatar/texto NO se agrandan como antes -- con equipos grandes eso
+  // hacía que la tabla se pasara del alto de pantalla y algunos asesores
+  // quedaran invisibles. Se usa el mismo tamaño compacto que en el dashboard normal.
+  const avatarSize = 36
   // Incluye lo vendido por Ponch (Web) de hoy (ver totalHoy en
   // n8n/ventas-web-diegodiaz-webhook.json), igual que "Total Vendido" en Datos del Mes.
   const ventasTotalesDia = visible.reduce((s, a) => s + (a.totalVentas || 0), 0) + (ventasWeb?.totalHoy || 0)
@@ -248,7 +261,7 @@ export default function PantallaDatosDelDia({ tvMode = false }) {
                           }}
                         />
                       )}
-                      <span className="pdd-asesor-name" style={{ fontSize: tvMode ? 16 : 14.5 }}>{a.nombre}</span>
+                      <span className="pdd-asesor-name" style={{ fontSize: 14.5 }}>{a.nombre}</span>
                     </div>
                   </td>
                   <td className="pdd-num">{isWeb ? '—' : fmtInt(a.totalLlamadas)}</td>

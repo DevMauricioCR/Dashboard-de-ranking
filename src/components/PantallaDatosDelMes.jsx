@@ -48,21 +48,22 @@ function colorVars(hex) {
 }
 
 const CSS = `
-.pdm-card{ background:var(--s1); border:1px solid rgba(255,255,255,0.06); padding:24px; position:relative; }
+.pdm-card{ background:var(--s1); border:1px solid rgba(255,255,255,0.06); padding:18px; position:relative; }
 .pdm-card::before, .pdm-card::after{ content:''; position:absolute; width:14px; height:14px; pointer-events:none; }
 .pdm-card::before{ top:-1px; left:-1px; border-top:2px solid var(--cyan); border-left:2px solid var(--cyan); }
 .pdm-card::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); }
-.pdm-kpi{ padding:22px 28px; margin-bottom:16px; background:linear-gradient(135deg, rgba(0,255,214,0.08), rgba(255,46,126,0.04)); border-color:rgba(0,255,214,0.3); display:flex; gap:40px; flex-wrap:wrap; }
-.pdm-kpi-label{ font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.09em; font-weight:700; }
-.pdm-kpi-value{ font-weight:700; font-size:30px; letter-spacing:-0.01em; color:var(--cyan); text-shadow:0 0 18px rgba(0,255,214,0.35); margin-top:6px; }
-.pdm-card-title{ display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.pdm-kpi{ padding:10px 18px; margin-bottom:8px; background:linear-gradient(135deg, rgba(0,255,214,0.08), rgba(255,46,126,0.04)); border-color:rgba(0,255,214,0.3); display:flex; gap:16px; flex-wrap:nowrap; }
+.pdm-kpi > div{ flex:1 1 0; min-width:0; }
+.pdm-kpi-label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pdm-kpi-value{ font-weight:700; font-size:20px; letter-spacing:-0.01em; color:var(--cyan); text-shadow:0 0 18px rgba(0,255,214,0.35); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pdm-card-title{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); }
 .pdm-card-title h2{ font-size:16px; font-weight:700; color:var(--text); }
 .pdm-card-title h2::before{ content:'▸ '; color:var(--cyan); }
 .pdm-card-title span{ font-size:11.5px; color:var(--muted); font-weight:600; letter-spacing:0.03em; }
-.pdm-col-heads{ display:grid; grid-template-columns:34px 1fr 190px 150px 190px; gap:14px; padding:0 16px 10px 16px; font-size:11px; font-weight:700; letter-spacing:0.06em; color:var(--muted); text-transform:uppercase; }
+.pdm-col-heads{ display:grid; grid-template-columns:34px 1fr 190px 150px 190px; gap:14px; padding:0 16px 4px 16px; font-size:11px; font-weight:700; letter-spacing:0.06em; color:var(--muted); text-transform:uppercase; }
 .pdm-col-heads .r{ text-align:right; }
-.pdm-rows{ display:flex; flex-direction:column; gap:8px; }
-.pdm-row{ display:grid; grid-template-columns:34px 1fr 190px 150px 190px; align-items:center; gap:14px; background:var(--s2); border:1px solid rgba(255,255,255,0.06); border-left:3px solid var(--c); border-radius:8px; padding:13px 16px; transition:transform .18s ease, box-shadow .18s ease; }
+.pdm-rows{ display:flex; flex-direction:column; gap:4px; }
+.pdm-row{ display:grid; grid-template-columns:34px 1fr 190px 150px 190px; align-items:center; gap:14px; background:var(--s2); border:1px solid rgba(255,255,255,0.06); border-left:3px solid var(--c); border-radius:8px; padding:5px 14px; transition:transform .18s ease, box-shadow .18s ease; }
 .pdm-row:hover{ transform:translateY(-2px); box-shadow:0 8px 22px -8px var(--c-glow); }
 .pdm-row.top1{ background:linear-gradient(90deg, rgba(255,184,0,0.07), var(--s2) 40%); }
 .pdm-rank{ font-weight:800; font-size:15px; color:var(--muted); text-align:center; }
@@ -70,8 +71,8 @@ const CSS = `
 .pdm-asesor-cell{ display:flex; align-items:center; gap:12px; min-width:0; }
 .pdm-avatar{ border-radius:50%; flex-shrink:0; border:1.5px solid var(--c); box-shadow:0 0 8px var(--c-glow); background:#0d1416; }
 .pdm-asesor-name{ font-weight:700; font-size:14.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pdm-metric{ display:flex; flex-direction:column; gap:6px; }
-.pdm-metric-val{ font-weight:700; font-size:15px; text-align:right; color:var(--text); }
+.pdm-metric{ display:flex; flex-direction:column; gap:4px; }
+.pdm-metric-val{ font-weight:700; font-size:14px; text-align:right; color:var(--text); }
 .pdm-metric-val.accent{ color:var(--c); }
 .pdm-metric.llamadas{ align-items:center; margin-right:20px; }
 .pdm-metric.llamadas .pdm-metric-val{ text-align:center; }
@@ -96,6 +97,14 @@ const CSS = `
   .pdm-metric.llamadas .pdm-metric-val{ text-align:left; }
   .pdm-metric.ventas{ grid-area:ventas; }
   .pdm-perf{ grid-area:perf; align-items:flex-start; }
+}
+@media (max-width:768px){
+  /* El nowrap de .pdm-kpi es para que quepa en una sola línea en el kiosco
+     de TV (pantalla ancha, sin scroll); en celular sí hay scroll, así que
+     mejor dejar que cada KPI se lea completo en vez de truncarlo. */
+  .pdm-kpi{ flex-wrap:wrap; gap:16px 28px; }
+  .pdm-kpi > div{ flex:1 1 40%; }
+  .pdm-kpi-label, .pdm-kpi-value{ white-space:normal; overflow:visible; text-overflow:clip; }
 }
 `
 
@@ -139,7 +148,11 @@ export default function PantallaDatosDelMes({ tvMode = false }) {
       return { ...a, prevValue, trend }
     })
 
-  const avatarSize = tvMode ? 46 : 38
+  // En TV el kiosco no puede hacer scroll (pantalla-kiosk usa overflow:hidden),
+  // así que el avatar/texto NO se agrandan como antes -- con equipos grandes eso
+  // hacía que la tabla se pasara del alto de pantalla y algunos asesores
+  // quedaran invisibles. Se usa el mismo tamaño compacto que en el dashboard normal.
+  const avatarSize = 36
   // "Total Vendido" cuenta un negocio ganado por su fecha de CREACIÓN (ver
   // filterClosedDealsByPeriod en useData.ts), para cuadrar con el tablero de HubSpot
   // -- que siempre está filtrado por "Fecha de creación", nunca por fecha de cierre.
@@ -279,7 +292,7 @@ export default function PantallaDatosDelMes({ tvMode = false }) {
                       }}
                     />
                   )}
-                  <span className="pdm-asesor-name" style={{ fontSize: tvMode ? 16 : 14.5 }}>{a.nombre}</span>
+                  <span className="pdm-asesor-name" style={{ fontSize: 14.5 }}>{a.nombre}</span>
                 </div>
 
                 <div className="pdm-metric llamadas">
