@@ -57,12 +57,12 @@ const CSS = `
 .pva-row{ display:grid; grid-template-columns:1fr 190px; align-items:center; gap:14px; background:var(--s2); border:1px solid rgba(255,255,255,0.06); border-left:3px solid var(--c); border-radius:8px; padding:calc(5px * var(--row-scale, 1)) 14px; overflow:hidden; transition:transform .18s ease, box-shadow .18s ease; }
 .pva-rows.pva-fit .pva-row{ flex:1 1 0; min-height:0; }
 .pva-row:hover{ transform:translateY(-2px); box-shadow:0 8px 22px -8px var(--c-glow); }
-.pva-asesor-cell{ display:flex; align-items:center; gap:12px; min-width:0; }
+.pva-asesor-cell{ display:flex; align-items:center; gap:calc(12px * var(--row-scale, 1)); min-width:0; }
 .pva-avatar{ border-radius:50%; flex-shrink:0; border:1.5px solid var(--c); box-shadow:0 0 8px var(--c-glow); background:#0d1416; }
 .pva-asesor-name{ font-weight:700; font-size:calc(14.5px * var(--row-scale, 1)); color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pva-metric-ventas{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.pva-metric-ventas{ display:flex; flex-direction:column; gap:calc(3px * var(--row-scale, 1)); min-width:0; }
 .pva-year-val{ text-align:right; font-weight:700; font-size:calc(13px * var(--row-scale, 1)); color:var(--c); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pva-mini-track{ height:4px; width:100%; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
+.pva-mini-track{ height:calc(4px * var(--row-scale, 1)); width:100%; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
 .pva-mini-fill{ height:100%; border-radius:3px; background:var(--c); box-shadow:0 0 6px var(--c-glow); transform-origin:right; transition:width .8s cubic-bezier(0.16,1,0.3,1); }
 .pva-mini-fill.hit{ background:var(--amber); box-shadow:0 0 8px rgba(255,184,0,0.6); }
 .pva-meta-label{ font-size:calc(9px * var(--row-scale, 1)); text-align:right; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
