@@ -93,13 +93,13 @@ const CSS = `
 .pdd-asesor-cell{ display:flex; align-items:center; gap:12px; min-width:0; }
 .pdd-avatar{ border-radius:50%; flex-shrink:0; border:1.5px solid var(--c); box-shadow:0 0 8px var(--c-glow); background:#0d1416; }
 .pdd-asesor-name{ font-weight:700; font-size:calc(14.5px * var(--row-scale, 1)); color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pdd-num{ text-align:right; color:var(--muted); font-weight:500; font-size:calc(14.5px * var(--row-scale, 1)); }
+.pdd-num{ text-align:right; color:var(--muted); font-weight:500; font-size:calc(14.5px * var(--row-scale, 1)); min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pdd-num.total{ color:var(--c); font-weight:700; font-size:calc(15px * var(--row-scale, 1)); }
 .pdd-meta-cell{ display:flex; flex-direction:column; gap:6px; min-width:0; }
 .pdd-mini-track{ height:4px; width:100%; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
 .pdd-mini-fill{ height:100%; border-radius:3px; background:var(--c); box-shadow:0 0 6px var(--c-glow); transform-origin:right; transition:width .8s cubic-bezier(0.16,1,0.3,1); }
 .pdd-mini-fill.hit{ background:var(--amber); box-shadow:0 0 8px rgba(255,184,0,0.6); }
-.pdd-meta-label{ font-size:calc(10.5px * var(--row-scale, 1)); text-align:right; color:var(--dim); }
+.pdd-meta-label{ font-size:calc(9px * var(--row-scale, 1)); text-align:right; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pdd-meta-label.hit{ color:var(--amber); font-weight:700; }
 .pdd-web-icon{ border-radius:50%; flex-shrink:0; border:1.5px solid var(--c); box-shadow:0 0 8px var(--c-glow); background:#0d1416; display:flex; align-items:center; justify-content:center; }
 .pdd-row.web-row{ opacity:0.85; }

@@ -26,8 +26,8 @@ const CSS = `
 .pev-row{ display:grid; grid-template-columns:60% 1fr; align-items:center; gap:14px; padding:calc(7px * var(--row-scale, 1)) 14px; border-top:1px solid rgba(255,255,255,0.06); overflow:hidden; transition:background .12s; }
 .pev-rows.pev-fit .pev-row{ flex:1 1 0; min-height:0; }
 .pev-row:hover{ background:rgba(0,255,214,0.02); }
-.pev-evento-name{ font-weight:700; font-size:calc(14.5px * var(--row-scale, 1)); color:var(--text); overflow:hidden; text-overflow:ellipsis; }
-.pev-num{ text-align:right; }
+.pev-evento-name{ font-weight:700; font-size:calc(14.5px * var(--row-scale, 1)); color:var(--text); min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pev-num{ text-align:right; min-width:0; }
 .pev-count-big{ font-size:calc(19px * var(--row-scale, 1)); font-weight:800; color:var(--cyan); }
 @media (max-width:700px){
   .pev-table-card.pev-fit{ flex:none; }

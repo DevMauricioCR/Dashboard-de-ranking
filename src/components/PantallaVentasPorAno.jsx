@@ -60,12 +60,12 @@ const CSS = `
 .pva-asesor-cell{ display:flex; align-items:center; gap:12px; min-width:0; }
 .pva-avatar{ border-radius:50%; flex-shrink:0; border:1.5px solid var(--c); box-shadow:0 0 8px var(--c-glow); background:#0d1416; }
 .pva-asesor-name{ font-weight:700; font-size:calc(14.5px * var(--row-scale, 1)); color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pva-metric-ventas{ display:flex; flex-direction:column; gap:3px; }
-.pva-year-val{ text-align:right; font-weight:700; font-size:calc(13px * var(--row-scale, 1)); color:var(--c); }
+.pva-metric-ventas{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.pva-year-val{ text-align:right; font-weight:700; font-size:calc(13px * var(--row-scale, 1)); color:var(--c); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pva-mini-track{ height:4px; width:100%; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
 .pva-mini-fill{ height:100%; border-radius:3px; background:var(--c); box-shadow:0 0 6px var(--c-glow); transform-origin:right; transition:width .8s cubic-bezier(0.16,1,0.3,1); }
 .pva-mini-fill.hit{ background:var(--amber); box-shadow:0 0 8px rgba(255,184,0,0.6); }
-.pva-meta-label{ font-size:calc(10.5px * var(--row-scale, 1)); text-align:right; color:var(--dim); }
+.pva-meta-label{ font-size:calc(9px * var(--row-scale, 1)); text-align:right; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pva-meta-label.hit{ color:var(--amber); font-weight:700; }
 @media (max-width:820px){
   .pva-table-card.pva-fit{ flex:none; }
