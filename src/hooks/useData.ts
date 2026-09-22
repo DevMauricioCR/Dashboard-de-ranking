@@ -953,7 +953,14 @@ export function useVentasWeb(interval = REFRESH_INTERVAL) {
     },
     refetchInterval: interval,
     staleTime: Math.max(0, interval - 5_000),
-    retry: 2,
+    // No reintentar en 429: ese endpoint hace login server-to-server contra
+    // DD_Backend, que limita /auth/login a 10 intentos/15min (authLimiter). Si
+    // n8n devuelve 429 (rate limit ya agotado), reintentar de inmediato solo
+    // suma mas intentos a esa misma ventana y nunca deja que se libere -- mejor
+    // esperar al proximo refetchInterval, que para entonces ya tuvo tiempo de
+    // resolverse solo.
+    retry: (failureCount, error) =>
+      failureCount < 2 && !/HTTP 429/.test(String((error as Error)?.message)),
   });
 }
 
