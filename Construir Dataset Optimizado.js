@@ -59,6 +59,11 @@ if (
   }];
 }
 
+// Todo lo que sigue va dentro de este try (sin re-indentar para no mover el diff): si
+// HubSpot falla (429 agotado, caído, etc.) y hay un dataset guardado de este periodo,
+// se responde ese en vez de un 500 -- el dashboard muestra datos algo viejos en lugar
+// de quedarse en blanco. Sin dataset guardado el error se propaga igual que antes.
+try {
 function getPeriodRange(value) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Mexico_City',
@@ -121,7 +126,26 @@ async function hubspotFetch(path, options = {}) {
       : options.body;
   }
 
-  return await n8nContext.helpers.httpRequest(requestOptions);
+  // HubSpot responde 429 cuando se pasa del límite por ráfaga (~10s) -- aquí se
+  // lanzan varias búsquedas en paralelo (Promise.all), así que basta un refresh de
+  // más para topar. Se reintenta con espera creciente (respetando Retry-After si
+  // viene) antes de rendirse; si de plano no se puede, el catch del final sirve el
+  // último dataset guardado en vez de tronar con 500.
+  const MAX_ATTEMPTS = 4;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await n8nContext.helpers.httpRequest(requestOptions);
+    } catch (err) {
+      const status = err?.httpCode || err?.statusCode || err?.response?.status || err?.cause?.status;
+      if (String(status) !== '429' || attempt >= MAX_ATTEMPTS) throw err;
+      const retryAfter = Number(err?.response?.headers?.['retry-after'] || err?.headers?.['retry-after']);
+      const waitMs = Math.min(
+        Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 1500 * 2 ** (attempt - 1),
+        10_000
+      ) + Math.floor(Math.random() * 500);
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+  }
 }
 
 function chunkArray(arr, size = 100) {
@@ -1095,3 +1119,26 @@ return [{
     }
   }
 }];
+} catch (err) {
+  if (cached?.payload) {
+    const originalSavedAt = cached.savedAt;
+    // Enfriamiento: se da por "fresco" 60s más para que los siguientes refreshes no
+    // vuelvan a golpear HubSpot (y a gastar reintentos) mientras sigue limitado.
+    cached.savedAt = Date.now() - cacheTtlMs + 60_000;
+    return [{
+      json: {
+        ...cached.payload,
+        datasetSchemaVersion: DATASET_SCHEMA_VERSION,
+        cache: {
+          hit: true,
+          stale: true,
+          error: String(err?.message || err).slice(0, 200),
+          savedAt: originalSavedAt,
+          ageMs: Date.now() - originalSavedAt,
+          dirty: Boolean(staticData.cacheDirty)
+        }
+      }
+    }];
+  }
+  throw err;
+}

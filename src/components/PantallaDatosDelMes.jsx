@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
-import { useRankingAsesores, useVentasWeb } from '../hooks/useData'
+import { useRankingAsesores, useVentasWeb, useAdvisorRoster, getWebMeta } from '../hooks/useData'
 import useRowFit from '../hooks/useRowFit'
 import AdvisorAvatar from './AdvisorAvatar'
 
 // Paleta y layout exactos del diseño (datos_del_mes.html)
-const PALETTE = ['#00FFD6', '#4FD1FF', '#8A5CFF', '#FF2E7E', '#FFB800']
+const PALETTE = ['#00FFD6', '#4FD1FF', '#8A5CFF', '#FF2E7E', '#5CFF9D', '#FF6B3D', '#3D7BFF', '#E07BFF']
 const MEDALS = ['🥇', '🥈', '🥉']
 
 const fmtMXN = n => new Intl.NumberFormat('es-MX', {
@@ -71,7 +71,7 @@ const CSS = `
 .pdm-row{ display:grid; grid-template-columns:34px 1fr 190px 150px 190px; align-items:center; gap:14px; background:var(--s2); border:1px solid rgba(255,255,255,0.06); border-left:3px solid var(--c); border-radius:8px; padding:calc(5px * var(--row-scale, 1)) 14px; overflow:hidden; transition:transform .18s ease, box-shadow .18s ease; }
 .pdm-rows.pdm-fit .pdm-row{ flex:1 1 0; min-height:0; }
 .pdm-row:hover{ transform:translateY(-2px); box-shadow:0 8px 22px -8px var(--c-glow); }
-.pdm-row.top1{ background:linear-gradient(90deg, rgba(255,184,0,0.07), var(--s2) 40%); }
+.pdm-row.top1{ background:linear-gradient(90deg, rgba(0,255,214,0.07), var(--s2) 40%); }
 .pdm-rank{ font-weight:800; font-size:calc(15px * var(--row-scale, 1)); color:var(--muted); text-align:center; }
 .pdm-medal{ font-size:calc(19px * var(--row-scale, 1)); line-height:1; text-align:center; }
 .pdm-asesor-cell{ display:flex; align-items:center; gap:calc(12px * var(--row-scale, 1)); min-width:0; }
@@ -131,6 +131,7 @@ export default function PantallaDatosDelMes({ tvMode = false }) {
   const ranking = mesQ.data?.ranking || []
   const embudo = mesQ.data?.embudo || null
   const ventasWeb = ventasWebQ.data || null
+  const { metaWeb } = useAdvisorRoster()
   const prevRanking = prevQ.data?.ranking || []
   const hasPrevData = prevQ.isSuccess
 
@@ -192,8 +193,7 @@ export default function PantallaDatosDelMes({ tvMode = false }) {
       totalLlamadas: null,
       trend: webTrend,
       prevValue: webPrevValue,
-      avanceMetaPct: null,
-      metaPeriodo: null,
+      ...getWebMeta(metaWeb, ventasWeb.totalMesActual, 'mensual'),
     }] : []),
   ].sort((a, b) => (b.totalVentas || 0) - (a.totalVentas || 0))
 
@@ -313,14 +313,10 @@ export default function PantallaDatosDelMes({ tvMode = false }) {
 
                 <div className="pdm-metric ventas">
                   <div className="pdm-metric-val accent">{fmtMXN(a.totalVentas)}</div>
-                  {!isWeb && (
-                    <>
-                      <div className="pdm-mini-track">
-                        <div className={`pdm-mini-fill${metaHit ? ' hit' : ''}`} style={{ width: `${Math.min(100, metaPct)}%` }} />
-                      </div>
-                      <div className={`pdm-meta-label${metaHit ? ' hit' : ''}`}>{metaPct}% de meta · {fmtCompact(a.metaPeriodo)}</div>
-                    </>
-                  )}
+                  <div className="pdm-mini-track">
+                    <div className={`pdm-mini-fill${metaHit ? ' hit' : ''}`} style={{ width: `${Math.min(100, metaPct)}%` }} />
+                  </div>
+                  <div className={`pdm-meta-label${metaHit ? ' hit' : ''}`}>{metaPct}% de meta · {fmtCompact(a.metaPeriodo)}</div>
                 </div>
 
                 <div className="pdm-perf">

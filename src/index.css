@@ -1082,12 +1082,12 @@ body, body * {
 .pod.p2 .pod-av, .rrow:nth-child(5n+3) .av-sm { border-color: #4fd1ff; color: #4fd1ff; }
 .pod.p3 .pod-av, .rrow:nth-child(5n+4) .av-sm { border-color: var(--violet); color: var(--violet); }
 .rrow:nth-child(5n) .av-sm { border-color: var(--magenta); color: var(--magenta); }
-.rrow:nth-child(5n+1) .av-sm { border-color: var(--amber); color: var(--amber); }
+.rrow:nth-child(5n+1) .av-sm { border-color: #5cff9d; color: #5cff9d; }
 .rrow:nth-child(5n+2) .pfill { background: var(--cyan); box-shadow: 0 0 8px rgba(0,255,214,.45); }
 .rrow:nth-child(5n+3) .pfill { background: #4fd1ff; box-shadow: 0 0 8px rgba(79,209,255,.45); }
 .rrow:nth-child(5n+4) .pfill { background: var(--violet); box-shadow: 0 0 8px rgba(138,92,255,.45); }
 .rrow:nth-child(5n) .pfill { background: var(--magenta); box-shadow: 0 0 8px rgba(255,46,126,.45); }
-.rrow:nth-child(5n+1) .pfill { background: var(--amber); box-shadow: 0 0 8px rgba(255,184,0,.45); }
+.rrow:nth-child(5n+1) .pfill { background: #5cff9d; box-shadow: 0 0 8px rgba(92,255,157,.45); }
 .team-card {
   overflow: hidden;
   border: 1px solid rgba(0,255,214,.13);

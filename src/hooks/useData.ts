@@ -11,18 +11,30 @@ const DATASET_URL =
 const API_KEY = env.VITE_API_KEY;
 const REFRESH_INTERVAL = Number(env.VITE_REFRESH_INTERVAL || 60_000);
 
+export type AdvisorConfig = { nombre: string; cargo: string; metaMensual: number };
+
+// Meta mensual de "Ponch (Web)" (ventas de la página de Diego Díaz). Se edita en
+// Ajustes → Asesores junto con la lista de asesores.
+export const DEFAULT_META_WEB = 100_000;
+
 // Lista cerrada de asesores que se muestran en el ranking, con su meta
 // mensual individual. Cualquier owner de HubSpot que no esté en esta lista
 // se descarta (ver getAdvisorRoster / mergeRankingWithRoster) — el ranking
 // ya no se "descubre" dinámicamente desde el catálogo de owners.
-const ADVISOR_ROSTER = [
+//
+// Esta es solo la lista de RESPALDO / valores iniciales. La lista vigente se edita
+// desde Ajustes → Asesores y se guarda en n8n (webhook asesores-config, ver
+// n8n/asesores-config-webhook.json); ver useAdvisorRoster().
+export const DEFAULT_ADVISOR_ROSTER: AdvisorConfig[] = [
   { nombre: 'Mónica Velázquez', cargo: 'Asesor', metaMensual: 1_000_000 },
   { nombre: 'Yuliana Rivera Fararoni', cargo: 'Asesor', metaMensual: 800_000 },
   { nombre: 'Andrea Valdez', cargo: 'Asesor', metaMensual: 300_000 },
   { nombre: 'Andrea Paredes', cargo: 'Asesor', metaMensual: 300_000 },
-  { nombre: 'Jesús Maltos', cargo: 'Asesor', metaMensual: 200_000 },
-  { nombre: 'Omar Díaz', cargo: 'Asesor', metaMensual: 150_000 },
+  { nombre: 'Jesús Maltos', cargo: 'Asesor', metaMensual: 100_000 },
+  { nombre: 'Omar Díaz', cargo: 'Asesor', metaMensual: 100_000 },
   { nombre: 'Jose Francisco Zepeda Gallegos', cargo: 'Asesor', metaMensual: 100_000 },
+  { nombre: 'Jose Alejandro Garcia Gonzáles', cargo: 'Asesor', metaMensual: 50_000 },
+  { nombre: 'Héctor Cortez López', cargo: 'Asesor', metaMensual: 50_000 },
 ];
 
 export const isMockMode = false;
@@ -141,49 +153,63 @@ function normalizeName(value?: string | null) {
     .replace(/\s+/g, ' ');
 }
 
-function getAdvisorRoster(data: any) {
-  const payloadOwners = Array.isArray(data?.owners) ? data.owners : [];
-  const byName = new Map<string, any>();
+// Un nombre de la lista de asesores "coincide" con el nombre de un owner de HubSpot
+// si es igual (sin acentos/mayúsculas) o si todas sus palabras aparecen en el otro
+// nombre — así "Héctor Cortez" funciona igual que el nombre completo, hasta
+// que alguien los capture completos en Ajustes.
+function namesMatch(rosterName?: string | null, otherName?: string | null) {
+  const a = normalizeName(rosterName);
+  const b = normalizeName(otherName);
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const bTokens = new Set(b.split(' '));
+  return a.split(' ').every((token) => bTokens.has(token));
+}
 
-  ADVISOR_ROSTER.forEach((advisor, index) => {
-    byName.set(normalizeName(advisor.nombre), {
-      ownerId: `advisor-${index + 1}`,
-      ...advisor,
-      rosterIndex: index,
-    });
-  });
+function findAdvisorIndex(list: { nombre: string }[], name?: string | null) {
+  const exact = list.findIndex((advisor) => normalizeName(advisor.nombre) === normalizeName(name));
+  return exact >= 0 ? exact : list.findIndex((advisor) => namesMatch(advisor.nombre, name));
+}
+
+function getAdvisorRoster(data: any, roster: AdvisorConfig[]) {
+  const payloadOwners = Array.isArray(data?.owners) ? data.owners : [];
+
+  const list: any[] = roster.map((advisor, index) => ({
+    ownerId: `advisor-${index + 1}`,
+    ...advisor,
+    rosterIndex: index,
+  }));
 
   // Solo se completa el ownerId/cargo real de HubSpot para asesores que YA
-  // están en ADVISOR_ROSTER (por nombre). Un owner de HubSpot que no esté en
-  // la lista cerrada nunca se agrega — así el ranking queda limitado
+  // están en la lista (por nombre). Un owner de HubSpot que no esté en la
+  // lista cerrada nunca se agrega — así el ranking queda limitado
   // exactamente a estos asesores, sin importar qué traiga el webhook.
   payloadOwners.forEach((owner: any) => {
     const nombre = owner.nombre || owner.name || fullName(owner.firstName, owner.lastName);
-    const key = normalizeName(nombre);
-    const known = key ? byName.get(key) : null;
-    if (!known) return;
+    const index = findAdvisorIndex(list, nombre);
+    if (index < 0) return;
 
+    const known = list[index];
     const cargo = owner.cargo || owner.jobTitle || '';
-    byName.set(key, {
+    list[index] = {
       ...known,
       ownerId: String(owner.ownerId || owner.id || owner.userId || known.ownerId),
       cargo: known.cargo || cargo,
-    });
+    };
   });
 
-  return Array.from(byName.values()).sort((a, b) => a.rosterIndex - b.rosterIndex);
+  return list;
 }
 
-function mergeRankingWithRoster(ranking: any[], data: any, periodo: string) {
-  const rowsByName = new Map(
-    ranking.map((row) => [normalizeName(row.nombre || row.asesor), row])
-  );
-
+function mergeRankingWithRoster(ranking: any[], data: any, periodo: string, roster: AdvisorConfig[]) {
   // Lista cerrada: cualquier fila del webhook que no pertenezca a un asesor
-  // de ADVISOR_ROSTER (p.ej. "Sin asesor asignado" o alguien fuera de la
+  // de la lista (p.ej. "Sin asesor asignado" o alguien fuera de la
   // lista) se descarta en vez de agregarse al final.
-  const merged = getAdvisorRoster(data).map((advisor) => {
-    const row = rowsByName.get(normalizeName(advisor.nombre));
+  const merged = getAdvisorRoster(data, roster).map((advisor) => {
+    const rowName = (r: any) => r.nombre || r.asesor;
+    const row =
+      ranking.find((r) => normalizeName(rowName(r)) === normalizeName(advisor.nombre)) ||
+      ranking.find((r) => namesMatch(advisor.nombre, rowName(r)));
     if (row) {
       return { ...advisor, ...row, cargo: row.cargo || advisor.cargo, metaMensual: advisor.metaMensual };
     }
@@ -458,6 +484,87 @@ async function fetchDataset(periodo = 'mensual', force = false) {
   return data;
 }
 
+const ASESORES_CONFIG_URL =
+  env.VITE_WEBHOOK_ASESORES_CONFIG || `${env.VITE_N8N_BASE_URL || DEFAULT_N8N_BASE}/asesores-config`;
+
+function normalizeRoster(raw: any): AdvisorConfig[] | null {
+  const list = Array.isArray(raw?.asesores) ? raw.asesores : Array.isArray(raw) ? raw : null;
+  if (!list) return null;
+  const clean = list
+    .map((item: any) => ({
+      nombre: String(item?.nombre || '').trim(),
+      cargo: String(item?.cargo || 'Asesor').trim() || 'Asesor',
+      metaMensual: Math.max(0, toNumber(item?.metaMensual)),
+    }))
+    .filter((item: AdvisorConfig) => item.nombre);
+  return clean.length ? clean : null;
+}
+
+type AdvisorConfigPayload = { asesores: AdvisorConfig[] | null; metaWeb: number | null };
+
+async function fetchAdvisorConfig(): Promise<AdvisorConfigPayload> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(ASESORES_CONFIG_URL, { cache: 'no-store', signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const body = Array.isArray(data) ? data[0] ?? data : data;
+    const metaWeb = Number(body?.metaWeb);
+    return {
+      asesores: normalizeRoster(body),
+      metaWeb: body?.metaWeb != null && Number.isFinite(metaWeb) && metaWeb >= 0 ? metaWeb : null,
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// Guarda la lista de asesores en n8n (static data del workflow). Se manda como
+// text/plain a propósito: así el navegador no hace preflight CORS (OPTIONS) que el
+// webhook de n8n no contesta.
+export async function saveAdvisorConfig(
+  asesores: AdvisorConfig[],
+  metaWeb: number
+): Promise<{ asesores: AdvisorConfig[]; metaWeb: number }> {
+  const clean = normalizeRoster(asesores);
+  if (!clean) throw new Error('La lista de asesores no puede quedar vacía');
+  const res = await fetch(ASESORES_CONFIG_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ asesores: clean, metaWeb: Math.max(0, toNumber(metaWeb)) }),
+  });
+  if (!res.ok) throw new Error(`Error ${res.status} al guardar en n8n`);
+  return { asesores: clean, metaWeb: Math.max(0, toNumber(metaWeb)) };
+}
+
+// Lista vigente de asesores (nombre + meta mensual): la que se guardó desde Ajustes en
+// n8n, o DEFAULT_ADVISOR_ROSTER mientras carga / si el webhook aún no existe.
+export const ADVISOR_CONFIG_QUERY_KEY = ['asesores-config', ASESORES_CONFIG_URL];
+
+export function useAdvisorRoster() {
+  const query = useQuery({
+    queryKey: ADVISOR_CONFIG_QUERY_KEY,
+    queryFn: fetchAdvisorConfig,
+    refetchInterval: 10 * 60_000,
+    staleTime: 60_000,
+    retry: 1,
+  });
+  return {
+    roster: query.data?.asesores || DEFAULT_ADVISOR_ROSTER,
+    metaWeb: query.data?.metaWeb ?? DEFAULT_META_WEB,
+    isSaved: Boolean(query.data?.asesores),
+    query,
+  };
+}
+
+// Meta de Ponch (Web) ya escalada al periodo (diario = mensual/30), con el mismo
+// avance % que usan las filas de asesores.
+export function getWebMeta(metaWeb: number, vendido: number, periodo = 'mensual') {
+  const row = withMeta({ metaMensual: metaWeb, totalVentas: vendido }, periodo);
+  return { metaPeriodo: row.metaPeriodo, avanceMetaPct: row.avanceMetaPct };
+}
+
 function useDealsDataset(periodo = 'mensual', interval = REFRESH_INTERVAL) {
   return useQuery({
     queryKey: ['hubspot-deals-dataset', DATASET_URL, periodo],
@@ -474,6 +581,7 @@ export async function refreshDatasetNow(periodo = 'mensual') {
 }
 
 export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTERVAL) {
+  const { roster } = useAdvisorRoster();
   return useQuery({
     queryKey: ['hubspot-deals-dataset', DATASET_URL, periodo],
     queryFn: () => fetchDataset(periodo),
@@ -496,7 +604,7 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
         }, periodo));
         return {
           ...data,
-          ranking: mergeRankingWithRoster(normalizedRanking, data, periodo),
+          ranking: mergeRankingWithRoster(normalizedRanking, data, periodo, roster),
         };
       }
 
@@ -504,7 +612,7 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
       const calls = toCallsPayload(data);
       const grouped = new Map<string, any>();
 
-      for (const advisor of getAdvisorRoster(data)) {
+      for (const advisor of getAdvisorRoster(data, roster)) {
         grouped.set(String(advisor.ownerId), {
           ...advisor,
           totalVentas: 0,
@@ -524,9 +632,7 @@ export function useRankingAsesores(periodo = 'mensual', interval = REFRESH_INTER
 
         // Lista cerrada: un deal de un asesor fuera de ADVISOR_ROSTER no
         // suma al ranking (ni crea una fila nueva).
-        const rosterMatch = Array.from(grouped.values()).find(
-          (row) => normalizeName(row.nombre) === normalizeName(nombre)
-        );
+        const rosterMatch = Array.from(grouped.values()).find((row) => namesMatch(row.nombre, nombre));
         if (!rosterMatch) continue;
 
         const row = grouped.get(String(rosterMatch.ownerId));
@@ -779,11 +885,10 @@ async function fetchVentaAnualSheet(): Promise<VentaAnualSheetRow[]> {
   }
 }
 
-// Separa las filas de la hoja en las que sí pertenecen a un asesor de ADVISOR_ROSTER
+// Separa las filas de la hoja en las que sí pertenecen a un asesor de la lista
 // (aplicando el alias de arriba) de las que no — mismo criterio de lista cerrada que
 // el resto del dashboard: lo que no matchea se agrupa en "Asesores anteriores".
-function ventaAnualBaseFromSheet(rows: VentaAnualSheetRow[]) {
-  const rosterNames = new Set(ADVISOR_ROSTER.map((a) => normalizeName(a.nombre)));
+function ventaAnualBaseFromSheet(rows: VentaAnualSheetRow[], roster: AdvisorConfig[]) {
   const byName = new Map<string, number>();
   let otrosTotal = 0;
 
@@ -792,10 +897,11 @@ function ventaAnualBaseFromSheet(rows: VentaAnualSheetRow[]) {
     if (!rawNombre) continue;
 
     const aliasNombre = VENTA_ANUAL_ALIAS[normalizeName(rawNombre)] || rawNombre;
-    const key = normalizeName(aliasNombre);
     const total = toNumber(row.total);
+    const index = findAdvisorIndex(roster, aliasNombre);
 
-    if (rosterNames.has(key)) {
+    if (index >= 0) {
+      const key = normalizeName(roster[index].nombre);
       byName.set(key, (byName.get(key) || 0) + total);
     } else {
       otrosTotal += total;
@@ -805,14 +911,24 @@ function ventaAnualBaseFromSheet(rows: VentaAnualSheetRow[]) {
   return { byName, otrosTotal };
 }
 
+function lookupByAdvisorName(map: Map<string, number>, advisorName: string) {
+  const exact = map.get(normalizeName(advisorName));
+  if (exact !== undefined) return exact;
+  for (const [key, value] of map) {
+    if (namesMatch(advisorName, key)) return value;
+  }
+  return 0;
+}
+
 function combineVentasAnuales(
   byName: Map<string, number>,
   otrosTotal: number,
-  mesActualByName: Map<string, number>
+  mesActualByName: Map<string, number>,
+  roster: AdvisorConfig[]
 ) {
-  const merged = ADVISOR_ROSTER.map((advisor, index) => {
-    const base = byName.get(normalizeName(advisor.nombre)) ?? 0;
-    const mesActual = mesActualByName.get(normalizeName(advisor.nombre)) ?? 0;
+  const merged = roster.map((advisor, index) => {
+    const base = lookupByAdvisorName(byName, advisor.nombre);
+    const mesActual = lookupByAdvisorName(mesActualByName, advisor.nombre);
     return {
       ownerId: `advisor-${index + 1}`,
       ...advisor,
@@ -848,6 +964,7 @@ function combineVentasAnuales(
 // curso en HubSpot. Si la hoja aún no cargó o falla, usa el corte estático de arriba
 // como respaldo para que la pantalla nunca quede en blanco.
 export function useVentasAnualesSheet() {
+  const { roster } = useAdvisorRoster();
   const sheetQ = useQuery({
     queryKey: ['venta-anual-sheet', VENTA_ANUAL_SHEET_URL],
     queryFn: fetchVentaAnualSheet,
@@ -864,7 +981,7 @@ export function useVentasAnualesSheet() {
 
   const sheetRows = Array.isArray(sheetQ.data) ? sheetQ.data : null;
   const { byName, otrosTotal } = sheetRows
-    ? ventaAnualBaseFromSheet(sheetRows)
+    ? ventaAnualBaseFromSheet(sheetRows, roster)
     : {
         byName: new Map(
           Object.entries(VENTAS_ANUALES_HASTA_JULIO_2026).map(([nombre, total]) => [normalizeName(nombre), total])
@@ -873,7 +990,7 @@ export function useVentasAnualesSheet() {
       };
 
   return {
-    data: { ranking: combineVentasAnuales(byName, otrosTotal, mesActualByName), fuenteHoja: Boolean(sheetRows) },
+    data: { ranking: combineVentasAnuales(byName, otrosTotal, mesActualByName, roster), fuenteHoja: Boolean(sheetRows) },
     isLoading: false,
     isError: false,
     error: null,

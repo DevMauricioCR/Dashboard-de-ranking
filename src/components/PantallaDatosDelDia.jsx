@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
-import { useRankingAsesores, useVentasWeb } from '../hooks/useData'
+import { useRankingAsesores, useVentasWeb, useAdvisorRoster, getWebMeta } from '../hooks/useData'
 import useRowFit from '../hooks/useRowFit'
 import AdvisorAvatar from './AdvisorAvatar'
 
 // Paleta exacta del diseño (ventas_por_asesor.html)
-const PALETTE = ['#00FFD6', '#4FD1FF', '#8A5CFF', '#FF2E7E', '#FFB800']
+const PALETTE = ['#00FFD6', '#4FD1FF', '#8A5CFF', '#FF2E7E', '#5CFF9D', '#FF6B3D', '#3D7BFF', '#E07BFF']
 
 const fmtInt = n => new Intl.NumberFormat('es-MX').format(n || 0)
 
@@ -141,6 +141,7 @@ export default function PantallaDatosDelDia({ tvMode = false }) {
   const embudo = diaQ.data?.embudo || null
   const embudoByAdvisor = useMemo(() => porAsesorMap(embudo), [embudo])
   const ventasWeb = ventasWebQ.data || null
+  const { metaWeb } = useAdvisorRoster()
 
   // En TV (kiosco sin scroll) las filas se encogen o agrandan automáticamente
   // según cuántos asesores haya y el alto disponible, para que siempre quepan
@@ -169,8 +170,7 @@ export default function PantallaDatosDelDia({ tvMode = false }) {
       nombre: 'Ponch (Web)',
       totalVentas: ventasWeb.totalHoy || 0,
       totalLlamadas: null,
-      avanceMetaPct: null,
-      metaPeriodo: null,
+      ...getWebMeta(metaWeb, ventasWeb.totalHoy || 0, 'diario'),
     }] : []),
   ].sort((a, b) => (b.totalVentas || 0) - (a.totalVentas || 0))
 
@@ -277,18 +277,12 @@ export default function PantallaDatosDelDia({ tvMode = false }) {
                 <div className="pdd-num c4">{isWeb ? '—' : fmtInt(getEmbudoCount(embudoByAdvisor, a, 'interesados'))}</div>
                 <div className="pdd-num c5">{isWeb ? '—' : fmtInt(getEmbudoCount(embudoByAdvisor, a, 'promesas'))}</div>
                 <div className="c6">
-                  {isWeb ? (
-                    <div className="pdd-meta-cell">
-                      <span className="pdd-meta-label">mes en curso: {fmtCompact(ventasWeb?.totalMesActual || 0)}</span>
+                  <div className="pdd-meta-cell">
+                    <div className="pdd-mini-track">
+                      <div className={`pdd-mini-fill${metaHit ? ' hit' : ''}`} style={{ width: `${Math.min(100, metaPct)}%` }} />
                     </div>
-                  ) : (
-                    <div className="pdd-meta-cell">
-                      <div className="pdd-mini-track">
-                        <div className={`pdd-mini-fill${metaHit ? ' hit' : ''}`} style={{ width: `${Math.min(100, metaPct)}%` }} />
-                      </div>
-                      <div className={`pdd-meta-label${metaHit ? ' hit' : ''}`}>{metaPct}% de meta · {fmtCompact(a.metaPeriodo)}</div>
-                    </div>
-                  )}
+                    <div className={`pdd-meta-label${metaHit ? ' hit' : ''}`}>{metaPct}% de meta · {fmtCompact(a.metaPeriodo)}</div>
+                  </div>
                 </div>
                 <div className="pdd-num total">${(a.totalVentas || 0).toLocaleString()}</div>
               </div>

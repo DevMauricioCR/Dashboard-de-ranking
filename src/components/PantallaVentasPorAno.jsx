@@ -3,7 +3,7 @@ import useRowFit from '../hooks/useRowFit'
 import AdvisorAvatar from './AdvisorAvatar'
 
 // Paleta y layout exactos del diseño (ventas_por_ano.html)
-const PALETTE = ['#00FFD6', '#4FD1FF', '#8A5CFF', '#FF2E7E', '#FFB800']
+const PALETTE = ['#00FFD6', '#4FD1FF', '#8A5CFF', '#FF2E7E', '#5CFF9D', '#FF6B3D', '#3D7BFF', '#E07BFF']
 
 const fmtMXN = n => new Intl.NumberFormat('es-MX', {
   style: 'currency', currency: 'MXN', maximumFractionDigits: 0,
