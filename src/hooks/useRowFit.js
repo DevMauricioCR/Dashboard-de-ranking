@@ -14,7 +14,10 @@ const MAX_SCALE = 1.55
 // pantallas primero muestran un estado de carga sin el contenedor real, así
 // que el nodo aparece recién en un render posterior -- un useRef normal con
 // useEffect no se vuelve a ejecutar solo porque el ref se llenó después.
-export default function useRowFit(rowCount, active = true) {
+// baseRowHeight permite a pantallas con filas de varias líneas (p. ej. Datos
+// del mes: monto + barra + meta, y pastilla + "antes") reservar más alto por
+// fila para que el contenido no se encime ni se corte.
+export default function useRowFit(rowCount, active = true, baseRowHeight = BASE_ROW_HEIGHT) {
   const [containerEl, setContainerEl] = useState(null)
   const containerRef = useCallback(node => setContainerEl(node), [])
   const [scale, setScale] = useState(1)
@@ -29,7 +32,7 @@ export default function useRowFit(rowCount, active = true) {
     const measure = () => {
       const height = containerEl.clientHeight
       if (!height) return
-      const idealTotal = rowCount * BASE_ROW_HEIGHT + Math.max(0, rowCount - 1) * BASE_GAP
+      const idealTotal = rowCount * baseRowHeight + Math.max(0, rowCount - 1) * BASE_GAP
       const next = height / idealTotal
       setScale(Math.min(MAX_SCALE, Math.max(MIN_SCALE, next)))
     }
@@ -38,7 +41,7 @@ export default function useRowFit(rowCount, active = true) {
     const ro = new ResizeObserver(measure)
     ro.observe(containerEl)
     return () => ro.disconnect()
-  }, [rowCount, active, containerEl])
+  }, [rowCount, active, containerEl, baseRowHeight])
 
   return { containerRef, scale }
 }

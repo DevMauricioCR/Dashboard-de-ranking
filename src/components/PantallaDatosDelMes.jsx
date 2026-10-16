@@ -93,6 +93,8 @@ const CSS = `
 .pdm-pill.down{ background:rgba(255,107,147,0.12); color:#FF6B93; }
 .pdm-perf-prev{ font-size:calc(9px * var(--row-scale, 1)); color:var(--dim); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
 .pdm-row.web-row{ opacity:0.85; }
+.pdm-row{ line-height:1.15; }
+.pdm-pill{ line-height:1.1; }
 .pdm-web-icon{ border-radius:50%; flex-shrink:0; border:1.5px solid var(--c); box-shadow:0 0 8px var(--c-glow); background:#0d1416; display:flex; align-items:center; justify-content:center; }
 @media (max-width:900px){
   .pdm-table-card.pdm-fit{ flex:none; }
@@ -139,7 +141,7 @@ export default function PantallaDatosDelMes({ tvMode = false }) {
   // según cuántos asesores haya y el alto disponible, para que siempre quepan
   // todas sin cortarse -- ver useRowFit.
   const rowCountForFit = ranking.filter(a => a.nombre !== 'Sin asesor asignado').length + (ventasWeb ? 1 : 0)
-  const { containerRef: rowsRef, scale: rowScale } = useRowFit(rowCountForFit, tvMode)
+  const { containerRef: rowsRef, scale: rowScale } = useRowFit(rowCountForFit, tvMode, 68)
 
   const prevByKey = useMemo(() => {
     const map = new Map()
@@ -164,9 +166,9 @@ export default function PantallaDatosDelMes({ tvMode = false }) {
       return { ...a, prevValue, trend }
     })
 
-  // "Total Vendido" cuenta un negocio ganado por su fecha de CREACIÓN (ver
+  // "Total Vendido" cuenta un negocio ganado por su fecha de CIERRE (ver
   // filterClosedDealsByPeriod en useData.ts), para cuadrar con el tablero de HubSpot
-  // -- que siempre está filtrado por "Fecha de creación", nunca por fecha de cierre.
+  // filtrado por "Fecha de cierre".
   // Da el mismo número que embudo.valorCerrado (misma fuente/criterio); se suma acá
   // desde la tabla para que quede consistente con la fila de cada asesor. Incluye
   // también lo vendido por Ponch (Web), que compite en la misma tabla de abajo.

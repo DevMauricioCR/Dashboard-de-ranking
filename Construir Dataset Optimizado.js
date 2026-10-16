@@ -21,7 +21,7 @@ const staticData = $getWorkflowStaticData('global');
 // Evita reutilizar datasets guardados por constructores antiguos. Súbela cada
 // vez que cambie la forma del payload (p.ej. v5: año/trimestre/mes-pasado
 // devuelven "ranking" agregado en vez de "deals" completos).
-const DATASET_SCHEMA_VERSION = 'v15-nuevo-negocio-todas-pipelines';
+const DATASET_SCHEMA_VERSION = 'v19-etapas-propiedad-detectada';
 const cacheKey = `dashboard:${DATASET_SCHEMA_VERSION}:${periodo}`;
 
 // TTL por periodo: "diario" alimenta la Pantalla 1 en vivo y necesita
@@ -108,6 +108,20 @@ function getPeriodRange(value) {
 const { start, end } = getPeriodRange(periodo);
 const n8nContext = this;
 
+// La API de búsqueda de HubSpot admite ~5 peticiones por segundo POR CUENTA. Aquí se
+// lanzan varias búsquedas en paralelo (negocios, llamadas, embudo, Interesados,
+// Promesas), así que se encolan: cada búsqueda espera su turno, separadas por
+// SEARCH_GAP_MS, en vez de dispararse juntas y toparse con el 429.
+const SEARCH_GAP_MS = 350;
+let nextSearchAt = 0;
+
+async function waitSearchSlot() {
+  const now = Date.now();
+  const slot = Math.max(now, nextSearchAt);
+  nextSearchAt = slot + SEARCH_GAP_MS;
+  if (slot > now) await new Promise((resolve) => setTimeout(resolve, slot - now));
+}
+
 async function hubspotFetch(path, options = {}) {
   const requestOptions = {
     method: options.method || 'GET',
@@ -131,13 +145,22 @@ async function hubspotFetch(path, options = {}) {
   // más para topar. Se reintenta con espera creciente (respetando Retry-After si
   // viene) antes de rendirse; si de plano no se puede, el catch del final sirve el
   // último dataset guardado en vez de tronar con 500.
-  const MAX_ATTEMPTS = 4;
+  const MAX_ATTEMPTS = 6;
+  const isSearch = String(path).includes('/search');
   for (let attempt = 1; ; attempt++) {
     try {
+      if (isSearch) await waitSearchSlot();
       return await n8nContext.helpers.httpRequest(requestOptions);
     } catch (err) {
       const status = err?.httpCode || err?.statusCode || err?.response?.status || err?.cause?.status;
-      if (String(status) !== '429' || attempt >= MAX_ATTEMPTS) throw err;
+      if (String(status) !== '429' || attempt >= MAX_ATTEMPTS) {
+        // Sin esto n8n solo muestra "Request failed with status code 400" y no se sabe
+        // cuál petición falló ni por qué: se agrega la ruta y lo que respondió HubSpot.
+        const detalle = err?.cause?.response?.data || err?.response?.data || err?.response?.body || err?.context?.data || err?.description || err?.cause?.message || err?.message || '';
+        const detalleTxt = typeof detalle === 'string' ? detalle : JSON.stringify(detalle);
+        const propiedad = requestOptions.body?.filterGroups?.[0]?.filters?.[0]?.propertyName || '';
+        throw new Error(`HubSpot ${status || ''} en ${requestOptions.method} ${path}${propiedad ? ` [filtro: ${propiedad}]` : ''}: ${detalleTxt}`.slice(0, 600));
+      }
       const retryAfter = Number(err?.response?.headers?.['retry-after'] || err?.headers?.['retry-after']);
       const waitMs = Math.min(
         Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 1500 * 2 ** (attempt - 1),
@@ -178,15 +201,90 @@ const DEALS_PAGE_CAP = 50; // tope duro de seguridad: 50 páginas x 100 = 5000 n
 // se excluye igual para que el conteo de negocios también cuadre.
 const EXCLUDED_PIPELINE_IDS = ['889232491', '933313851'];
 
+// Id del pipeline "Equipo Comercial" (leído de la API: es el único pipeline con
+// negocios del equipo, id "default"). Todas las consultas de negocios filtran por este
+// pipeline en vez de excluir los otros, así un pipeline nuevo nunca se cuela en los
+// conteos. Sus etapas (ids): appointmentscheduled = No contactado, qualifiedtobuy =
+// Contactado, presentationscheduled = Interesado, decisionmakerboughtin = Promesa de
+// pago, closedwon = Exitoso, closedlost = Perdido.
+const TEAM_PIPELINE_ID = 'default';
+const STAGE_INTERESADO = 'presentationscheduled';
+const STAGE_PROMESA = 'decisionmakerboughtin';
+
+function teamPipelineFilter() {
+  return { propertyName: 'pipeline', operator: 'EQ', value: TEAM_PIPELINE_ID };
+}
+
+// Negocios del pipeline del equipo MODIFICADOS dentro del rango, pidiendo las fechas de
+// entrada a Interesado y a Promesa (hs_date_entered_<etapa>). HubSpot responde 400 si se
+// FILTRA directo por hs_date_entered_*, pero sí permite LEERLA como propiedad. Como mover
+// un negocio de etapa siempre lo modifica, todo negocio que entró a una etapa en el
+// periodo también aparece aquí; luego se filtra por esa fecha en memoria
+// (ver getEmbudoSnapshot). Solo pide lo mínimo para contar por asesor.
+// Nombre real de la propiedad "fecha de entrada" de cada etapa en ESTA cuenta. HubSpot
+// ignora en silencio las propiedades que no existen, así que adivinar el nombre dejaba
+// Interesados/Promesas en 0 sin avisar. Se lee el catálogo de propiedades de negocios
+// (una llamada, cacheada 24 h) y se usa la que exista: hs_date_entered_<etapa>, o la
+// variante hs_v2_date_entered_<etapa>.
+async function getEnteredPropNames() {
+  const key = 'enteredProps:v1';
+  const cachedProps = staticData[key];
+  if (cachedProps && Date.now() - cachedProps.savedAt < 24 * 60 * 60 * 1000) return cachedProps.value;
+
+  const data = await hubspotFetch('/crm/v3/properties/deals');
+  const names = new Set((data.results || []).map(p => p.name));
+  const pick = (stageId) => [`hs_date_entered_${stageId}`, `hs_v2_date_entered_${stageId}`].find(n => names.has(n)) || null;
+  const value = {
+    [STAGE_INTERESADO]: pick(STAGE_INTERESADO),
+    [STAGE_PROMESA]: pick(STAGE_PROMESA),
+    candidatas: [...names].filter(n => n.includes('date_entered')).slice(0, 40)
+  };
+  staticData[key] = { savedAt: Date.now(), value };
+  return value;
+}
+
+async function searchDealsTouchedInPeriod(desde, hasta, enteredProps) {
+  const deals = [];
+  let after = null;
+  let page = 0;
+
+  do {
+    const body = {
+      filterGroups: [{
+        filters: [
+          { propertyName: 'hs_lastmodifieddate', operator: 'GTE', value: String(desde.getTime()) },
+          { propertyName: 'hs_lastmodifieddate', operator: 'LTE', value: String(hasta.getTime()) },
+          teamPipelineFilter()
+        ]
+      }],
+      properties: [
+        'hubspot_owner_id',
+        ...[enteredProps[STAGE_INTERESADO], enteredProps[STAGE_PROMESA]].filter(Boolean)
+      ],
+      limit: 100
+    };
+
+    if (after) body.after = after;
+
+    const data = await hubspotFetch('/crm/v3/objects/deals/search', {
+      method: 'POST',
+      body
+    });
+
+    deals.push(...(data.results || []));
+    after = data.paging?.next?.after || null;
+    page += 1;
+    // Tope de la API de búsqueda de HubSpot: 10,000 resultados (100 páginas x 100).
+  } while (after && page < 100);
+
+  return deals;
+}
+
 async function searchDeals() {
   const deals = [];
   let after = null;
   let page = 0;
-  const pipelineExclusions = EXCLUDED_PIPELINE_IDS.map(id => ({
-    propertyName: 'pipeline',
-    operator: 'NEQ',
-    value: id
-  }));
+  const pipelineExclusions = [teamPipelineFilter()];
 
   do {
     const body = {
@@ -242,6 +340,7 @@ async function searchDeals() {
 async function searchCalls() {
   const calls = [];
   let after = null;
+  let callPages = 0;
 
   do {
     const body = {
@@ -283,6 +382,13 @@ async function searchCalls() {
 
     calls.push(...(data.results || []));
     after = data.paging?.next?.after || null;
+    callPages += 1;
+    // La API de búsqueda de HubSpot responde error al pasar de 10,000 resultados
+    // (100 páginas x 100); se corta ahí y se marca para poder detectarlo.
+    if (after && callPages >= 100) {
+      staticData.callsTruncated = { periodo, at: new Date().toISOString() };
+      break;
+    }
   } while (after);
 
   return calls;
@@ -922,7 +1028,6 @@ async function getEmbudoSnapshot(periodoParaEmbudo, allDeals) {
     cantidadTotal += amount;
     cantidadPonderada += weighted;
     if (!won && !lost) cantidadAbierta += amount;
-    if (won) valorCerrado += amount;
 
     const ownerId = props.hubspot_owner_id ? String(props.hubspot_owner_id) : 'sin-owner';
     const { nombre } = ownerInfo(ownerId === 'sin-owner' ? null : ownerId);
@@ -931,13 +1036,61 @@ async function getEmbudoSnapshot(periodoParaEmbudo, allDeals) {
     row.cantidadTotal += amount;
     row.cantidadPonderada += weighted;
     if (!won && !lost) row.cantidadAbierta += amount;
-    if (won) row.valorCerrado += amount;
     if (esNuevoNegocio) row.cantidadNuevoNegocio += amount;
 
-    const stage = classifyEmbudoStage(stageLabel);
-    if (stage === 'interesado') row.interesados += 1;
-    else if (stage === 'promesa') row.promesas += 1;
-    else if (stage === 'cerrado') row.cerrados += 1;
+  }
+
+  // Interesados / Promesas: negocios que ENTRARON a esa etapa dentro del periodo (fecha
+  // de entrada a la etapa), cada uno con su propia consulta -- ya no se infieren de la
+  // etapa actual de los negocios creados en el periodo, que dejaba fuera a los que se
+  // crearon antes y hoy pasaron a Interesado/Promesa.
+  // Si una de estas dos consultas falla (p. ej. HubSpot rechaza la propiedad), no debe
+  // tumbar todo el dataset: ventas y llamadas siguen funcionando, y el motivo queda en
+  // embudo.errorEtapas para poder verlo en la respuesta del webhook.
+  let errorEtapas = null;
+  let tocados = [];
+  let enteredProps = {};
+  try {
+    enteredProps = await getEnteredPropNames();
+    if (!enteredProps[STAGE_INTERESADO] || !enteredProps[STAGE_PROMESA]) {
+      errorEtapas = `No existe la propiedad de fecha de entrada para: ${[STAGE_INTERESADO, STAGE_PROMESA].filter(s => !enteredProps[s]).join(', ')}`;
+    }
+    tocados = await searchDealsTouchedInPeriod(desde, hasta, enteredProps);
+  } catch (err) {
+    errorEtapas = String(err?.message || err).slice(0, 400);
+  }
+  const entroEnPeriodo = (deal, stageId) => {
+    const propName = enteredProps[stageId];
+    const raw = propName ? deal.properties?.[propName] : null;
+    if (!raw) return false;
+    const fecha = new Date(raw);
+    return !Number.isNaN(fecha.getTime()) && fecha >= desde && fecha <= hasta;
+  };
+  const entraronInteresado = tocados.filter(d => entroEnPeriodo(d, STAGE_INTERESADO));
+  const entraronPromesa = tocados.filter(d => entroEnPeriodo(d, STAGE_PROMESA));
+  for (const [lista, campo] of [[entraronInteresado, 'interesados'], [entraronPromesa, 'promesas']]) {
+    for (const deal of lista) {
+      const ownerId = deal.properties?.hubspot_owner_id ? String(deal.properties.hubspot_owner_id) : 'sin-owner';
+      const { nombre } = ownerInfo(ownerId === 'sin-owner' ? null : ownerId);
+      getRow(ownerId, nombre)[campo] += 1;
+    }
+  }
+
+  // Valor cerrado = ganados con fecha de CIERRE en el periodo (no de creación), sobre
+  // todo "allDeals" -- un negocio creado antes pero cerrado hoy sí cuenta como de hoy.
+  for (const deal of allDeals) {
+    const props = deal.properties || {};
+    const raw = props.closedate;
+    if (!raw || !isClosedWon(props.dealstage || null, stageLabelMap)) continue;
+    const fecha = new Date(raw);
+    if (Number.isNaN(fecha.getTime()) || fecha < desde || fecha > hasta) continue;
+    const amount = Number(props.amount || 0);
+    valorCerrado += amount;
+    const ownerId = props.hubspot_owner_id ? String(props.hubspot_owner_id) : 'sin-owner';
+    const { nombre } = ownerInfo(ownerId === 'sin-owner' ? null : ownerId);
+    const ganadoRow = getRow(ownerId, nombre);
+    ganadoRow.valorCerrado += amount;
+    ganadoRow.cerrados += 1;
   }
 
   // El tile "Cantidad de nuevo negocio" del tablero de HubSpot NO respeta el filtro de
@@ -959,6 +1112,8 @@ async function getEmbudoSnapshot(periodoParaEmbudo, allDeals) {
     cantidadAbierta,
     valorCerrado,
     cantidadNuevoNegocio,
+    errorEtapas,
+    propiedadesEtapa: { interesado: enteredProps[STAGE_INTERESADO] || null, promesa: enteredProps[STAGE_PROMESA] || null, candidatas: enteredProps.candidatas || [], negociosTocados: tocados.length },
     porAsesor: [...grouped.values()]
   };
 
@@ -981,7 +1136,16 @@ async function buildAggregatePayload() {
   ]);
   const { ownerMap, userMap, stageLabelMap } = catalogs;
 
-  const wonDeals = deals.filter(deal => isClosedWon(deal.properties?.dealstage, stageLabelMap));
+  // Ventas = ganados cuya fecha de CIERRE cae en el periodo (mismo criterio que el
+  // frontend, ver filterClosedDealsByPeriod en useData.ts). "deals" también trae los
+  // que solo se crearon en el periodo, que aquí no deben sumar.
+  const wonDeals = deals.filter(deal => {
+    if (!isClosedWon(deal.properties?.dealstage, stageLabelMap)) return false;
+    const raw = deal.properties?.closedate;
+    if (!raw) return false;
+    const fecha = new Date(raw);
+    return !Number.isNaN(fecha.getTime()) && fecha >= start && fecha <= end;
+  });
 
   function ownerInfo(ownerId) {
     const owner = ownerId ? ownerMap.get(ownerId) || null : null;

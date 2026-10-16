@@ -364,19 +364,19 @@ function filterDealsByPeriod(deals: HubspotDeal[], periodo: string) {
 }
 
 // "Ventas Totales" (ranking de asesores, ranking de producto) cuenta un negocio
-// ganado SOLO si su createdate cae en el periodo -- el tablero de HubSpot que se usa
-// para comparar SIEMPRE está filtrado por "Fecha de creación" (nunca por fecha de
-// cierre), así que este es el criterio que cuadra 1:1 con ese número. Es el mismo
-// criterio que ya usa embudo.valorCerrado en n8n (ver getEmbudoSnapshot en Construir
-// Dataset Optimizado.js) -- aquí se recalcula del lado del cliente para que la fila
-// de cada asesor en la tabla sume exacto al KPI de arriba.
+// ganado SOLO si su closedate (fecha de cierre) cae en el periodo -- verificado contra
+// el tablero de HubSpot filtrado por "Fecha de cierre" + propietario (4 negocios,
+// $15,842 hoy para Andrea Valdez). Antes se usaba createdate y no cuadraba. Es el
+// mismo criterio que usa embudo.valorCerrado en n8n (ver getEmbudoSnapshot en
+// Construir Dataset Optimizado.js) -- aquí se recalcula del lado del cliente para que
+// la fila de cada asesor en la tabla sume exacto al KPI de arriba.
 function filterClosedDealsByPeriod(deals: HubspotDeal[], periodo: string) {
   const { start, end } = getPeriodRange(periodo);
   const inRange = (value?: string | null) => {
     const date = parseDate(value);
     return Boolean(date && date >= start && date <= end);
   };
-  return deals.filter((deal) => inRange(deal.createDate));
+  return deals.filter((deal) => inRange(deal.closeDate));
 }
 
 function isClosedWon(deal: HubspotDeal) {
