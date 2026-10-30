@@ -57,6 +57,7 @@ const CSS = `
 .pva-row{ display:grid; grid-template-columns:1fr 190px; align-items:center; gap:14px; background:var(--s2); border:1px solid rgba(255,255,255,0.06); border-left:3px solid var(--c); border-radius:8px; padding:calc(5px * var(--row-scale, 1)) 14px; overflow:hidden; transition:transform .18s ease, box-shadow .18s ease; }
 .pva-rows.pva-fit .pva-row{ flex:1 1 0; min-height:0; }
 .pva-row:hover{ transform:translateY(-2px); box-shadow:0 8px 22px -8px var(--c-glow); }
+.pva-row{ line-height:1.15; }
 .pva-asesor-cell{ display:flex; align-items:center; gap:calc(12px * var(--row-scale, 1)); min-width:0; }
 .pva-avatar{ border-radius:50%; flex-shrink:0; border:1.5px solid var(--c); box-shadow:0 0 8px var(--c-glow); background:#0d1416; }
 .pva-asesor-name{ font-weight:700; font-size:calc(14.5px * var(--row-scale, 1)); color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -89,7 +90,7 @@ export default function PantallaVentasPorAno({ tvMode = false }) {
   // según cuántos asesores haya y el alto disponible, para que siempre quepan
   // todas sin cortarse -- ver useRowFit.
   const rowCountForFit = ranking.filter(a => a.nombre !== 'Sin asesor asignado').length
-  const { containerRef: rowsRef, scale: rowScale } = useRowFit(rowCountForFit, tvMode)
+  const { containerRef: rowsRef, scale: rowScale } = useRowFit(rowCountForFit, tvMode, 62)
 
   if (anioQ.isLoading) return <div className="state-box" style={{ paddingTop: 60 }}>Cargando pantalla…</div>
   if (anioQ.isError) return <div className="state-box" style={{ paddingTop: 60, color: 'var(--red-w)' }}>Error: {anioQ.error?.message}</div>
